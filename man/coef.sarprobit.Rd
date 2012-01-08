@@ -1,5 +1,6 @@
 \name{coef.sarprobit}
 \alias{coef.sarprobit}
+\alias{coefficients.sarprobit}
 
 \title{Extract Model Coefficients}
 \description{

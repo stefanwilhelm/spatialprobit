@@ -177,8 +177,11 @@ lndetfull <- function( W, lmin, lmax ){
   for(i in 1:niter){
     rho             <- rvec[i]
     z               <- In - rho*W
-    results$rho[i]  <- rho 
+    results$rho[i]  <- rho
+    #save(z, file="I:/R/spatialprobit/z.RData")
+    #print(class(z)) 
     results$lndet[i]<- as.real(determinant(z, log=TRUE)$modulus) 
+    #results$lndet[i]<- det(z, log=TRUE)
   }  
   return(results)
 }
