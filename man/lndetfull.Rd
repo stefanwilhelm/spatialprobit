@@ -1,10 +1,12 @@
 \name{lndetfull}
 \alias{lndetfull}
 \title{
-This function computes the Chebyshev log determinant approximation. 
+Computes Pace and Barry's grid for log det(I-rho*W) using sparse matrices.
+Chebyshev log determinant approximation for a spatial weight matrix. 
 }
 \description{
-This function computes the Chebyshev log determinant approximation.
+This function computes the Chebyshev log determinant approximation for
+\eqn{\ln{|I_n - \rho W|}}{ln|I_n - rho*W|}
 }
 \usage{
 lndetfull(W, lmin, lmax)
@@ -19,12 +21,20 @@ lndetfull(W, lmin, lmax)
 }
 }
 
+\value{
+\item{lndet}{a vector of log determinants for 0 < rho < 1}
+\item{rho}{a vector of \eqn{rho}{rho} values associated with lndet values}
+}
+
 \references{
-Pace and LeSage 2004, Chebyshev Approximation of log-determinants of spatial weight matrices, Computational Statistics and Data Analysis, vol 45
+LeSage, J. and Pace, R. K. (2009), \emph{Introduction to Spatial Econometrics}, CRC Press 
+
+LeSage, J. and Pace, R. K. (2004), Chebyshev Approximation of log-determinants of spatial weight matrices, \emph{Computational Statistics and Data Analysis}, \bold{45}
+
+Pace, R. K. and Barry, R. (1997), Quick Computation of Spatial Autoregressive Estimators, \emph{Geographical Analysis}
 }
-\author{
-Miguel Godinho de Matos <miguelgodinhomatos@cmu.edu>
-}
+
+\author{Miguel Godinho de Matos <miguelgodinhomatos@cmu.edu>}
 
 \examples{
 ##---- Should be DIRECTLY executable !! ----

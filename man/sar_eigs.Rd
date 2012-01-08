@@ -4,21 +4,21 @@
 compute the eigenvalues for the spatial weight matrix W
 }
 \description{
-compute the eigenvalues for the spatial weight matrix W
+compute the eigenvalues \eqn{\lambda}{lambda} for the spatial weight matrix \eqn{W} and lower and upper bound
+for parameter \eqn{\rho}{rho}.
 }
 \usage{
 sar_eigs(eflag, W)
 }
 \arguments{
-  \item{eflag}{
-%%     ~~Describe \code{eflag} here~~
+  \item{eflag}{if eflag==1, then eigen values
 }
   \item{W}{spatial weight matrix}
 }
 \value{
 function returns a list of
-\item{rmin }{minimum eigen value}
-\item{rmax }{maximum eigen value}
+\item{rmin }{minimum value for \eqn{\rho}{rho}. if eflag==1, then \eqn{1/\lambda_{min}}{1/min(lambda)} , else -1}
+\item{rmax }{maximum value for \eqn{\rho}{rho}. Always 1.}
 \item{time}{execution time}
 }
 
@@ -27,28 +27,10 @@ James P. LeSage, Adapted to R by Miguel Godinho de Matos <miguelgodinhomatos@cmu
 }
 
 \examples{
-##---- Should be DIRECTLY executable !! ----
-##-- ==>  Define data, use random,
-##--	or do  help(data=index)  for the standard data sets.
-
-## The function is currently defined as
-function (eflag, W) 
-{
-    results <- NULL
-    results$rmin <- -1
-    results$rmax <- 1
-    results$time <- 0
-    if (eflag == 1) {
-        t0 <- Sys.time()
-        lambda <- as.real(eigen(W, only.values = TRUE)$values)
-        results$rmin <- 1/min(lambda)
-        results$rmax <- 1
-        results$time <- Sys.time() - t0
-    }
-    return(results)
-  }
+set.seed(123)
+# sparse matrix representation for spatial weight matrix W (d x d) and m nearest neighbors
+d <- 100
+m <- 6
+W <- sparseMatrix(i=rep(1:d, each=m), j=replicate(d, sample(x=1:d, size=m, replace=FALSE)), x=1/m, dims=c(d, d))
+sar_eigs(eflag=1, W)    
 }
-% Add one or more standard keywords, see file 'KEYWORDS' in the
-% R documentation directory.
-\keyword{ ~kwd1 }
-\keyword{ ~kwd2 }% __ONLY ONE__ keyword per line
