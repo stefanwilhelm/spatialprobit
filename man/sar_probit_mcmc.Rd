@@ -7,7 +7,8 @@ Bayesian estimation of the spatial autoregressive probit model.
 }
 
 \usage{
-sar_probit_mcmc(y, X, W, ndraw = 1000, burn.in = 100, thinning = 1, prior, start = list(rho = 0.75, beta = rep(0, ncol(X))))
+sar_probit_mcmc(y, X, W, ndraw = 1000, burn.in = 100, thinning = 1, 
+  prior, start = list(rho = 0.75, beta = rep(0, ncol(X))))
 }
 \arguments{
   \item{y}{dependent variables. vector of zeros and ones}
@@ -24,18 +25,20 @@ sar_probit_mcmc(y, X, W, ndraw = 1000, burn.in = 100, thinning = 1, prior, start
 \details{
 Bayesian estimates of the spatial autoregressive probit model
 \deqn{
-  y = \rho W y + X B + e, e \sim N(0,I_n)
-  y is a binary 0,1 n x 1 vector
-  B = N(c,T), 
-  1/sige = Gamma(nu,d0), 
-  \rho \sim Uniform(rmin,rmax), or \rho \sim beta(a1,a2)
+  y = \rho W y + X \beta + \epsilon, \epsilon \sim N(0, I_n)
 }{
-  y = rho*W*y + XB + e, e = N(0,I_n)
-  y is a binary 0,1 n x 1 vector
-  B = N(c,T), 
-  1/sige = Gamma(nu,d0), 
-  rho = Uniform(rmin,rmax), or rho = beta(a1,a2)
-}
+  y = rho*W*y + X*beta + e, e ~ N(0,I_n)
+}  
+where y is a binary 0,1 \eqn{(n \times 1)}{(n x 1)} vector of observations, 
+\eqn{\beta}{beta} is a \eqn{(k \times 1)}{(k x 1)} vector of parameters associated with the \eqn{(n \times k)}{(n x k)} data matrix X.
+
+The prior distributions are 
+ \eqn{\beta \sim N(c,T)}{beta ~ N(c,T)}, \\
+ \eqn{1/sige \sim \Gamma(nu,d0)}{1/sige ~ Gamma(nu,d0)}, 
+ and  
+ \eqn{\rho \sim Uniform(rmin,rmax)}{rho ~ Uniform(rmin,rmax)} 
+ or 
+ \eqn{\rho \sim beta(a1,a2)}{or rho ~ beta(a1,a2)}.
 }
 \value{
 Returns a structure of class \code{sarprobit}:
@@ -103,26 +106,35 @@ Stefan Wilhelm <stefan.wilhelm@financial.com>, Miguel Godinho de Matos <miguelgo
 \examples{
 \dontrun{
 library(Matrix)
+# number of observations
 n <- 200
+
+# true parameters
 beta <- c(0, 1, -1)
 rho <- 0.75
-# design matrix with two standard normal variates as "coordinates"
+
+# design matrix with two standard normal variates as "covariates"
 X <- cbind(intercept=1, x=rnorm(n), y=rnorm(n))
+
+# sparse identity matrix
 I_n <- sparseMatrix(i=1:n, j=1:n, x=1)
+
+# number of nearest neighbors in spatial weight matrix W
 m <- 6
-W <- sparseMatrix(i=rep(1:n, each=m), j=replicate(n, sample(x=1:n, size=m, replace=FALSE)), x=1/m, dims=c(n, n))
-# identity matrix as spatial weight matrix for testing
-#W <- I_n
-  
-# create samples from epsilon using independence of distributions (rnorm()) to avoid dense matrix I_n
+
+# spatial weight matrix with m=6 nearest neighbors
+W <- sparseMatrix(i=rep(1:n, each=m), 
+  j=replicate(n, sample(x=1:n, size=m, replace=FALSE)), x=1/m, dims=c(n, n))
+
+# innovations
 eps <- rnorm(n=n, mean=0, sd=1)
- 
-S <- solve(I_n - rho * W)
-z <- S \%*\% X \%*\% beta + S \%*\% eps
+
+# generate data from model 
+S <- I_n - rho * W
+z <- solve(qr(S), X \%*\% beta + eps)
 y <- as.vector(z >= 0)  # 0 or 1, FALSE or TRUE
 
-
-# estimate model
+# estimate SAR probit model
 fit1 <- sar_probit_mcmc(y, X, W, ndraw=500, burn.in=100, thinning=1, prior=NULL)
 summary(fit1)
 }
