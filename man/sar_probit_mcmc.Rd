@@ -8,7 +8,9 @@ Bayesian estimation of the spatial autoregressive probit model.
 
 \usage{
 sar_probit_mcmc(y, X, W, ndraw = 1000, burn.in = 100, thinning = 1, 
-  prior, start = list(rho = 0.75, beta = rep(0, ncol(X))))
+  prior=list(a1=1, a2=1, c=rep(0, ncol(X)), T=diag(ncol(X))*1e12), 
+  start = list(rho = 0.75, beta = rep(0, ncol(X))),
+  m=10)
 }
 \arguments{
   \item{y}{dependent variables. vector of zeros and ones}
@@ -17,10 +19,11 @@ sar_probit_mcmc(y, X, W, ndraw = 1000, burn.in = 100, thinning = 1,
   \item{ndraw}{number of MCMC iterations}
   \item{burn.in}{number of MCMC burn-in to be discarded}
   \item{thinning}{MCMC thinning factor, defaults to 1.}
-  \item{prior}{
-%%     ~~Describe \code{prior} here~~
-}
+  \item{prior}{A list of prior settings for 
+               \eqn{\rho \sim beta(a1,a2)}{or rho ~ beta(a1,a2)} 
+               and \eqn{\beta \sim N(c,T)}{beta ~ N(c,T)}. Defaults to diffuse prior for beta.}
   \item{start}{list of start values}
+  \item{m}{Number of burn-in samples in innermost Gibbs sampler. Defaults to 10.}
 }
 \details{
 Bayesian estimates of the spatial autoregressive probit model

@@ -27,7 +27,7 @@ sar_lndet(ldetflag, W, rmin, rmax)
 }
 
 \references{
-John LeSage, R. Kelley Pace: Introduction to Spatial Econometrics. CRC Press. 2009
+LeSage, J. and Pace, R. K. (2009), \emph{Introduction to Spatial Econometrics}, CRC Press, chapter 4 
 }
 
 \author{
@@ -39,10 +39,12 @@ James P. LeSage, Adapted to R by Miguel Godinho de Matos <miguelgodinhomatos@cmu
 \examples{
 require(Matrix)
 
-# sparse matrix representation for spatial weight matrix W (d x d) and m nearest neighbors
+# sparse matrix representation for spatial weight matrix W (d x d) 
+# and m nearest neighbors
 d <- 100
 m <- 6
-W <- sparseMatrix(i=rep(1:d, each=m), j=replicate(d, sample(x=1:d, size=m, replace=FALSE)), x=1/m, dims=c(d, d))
+W <- sparseMatrix(i=rep(1:d, each=m), 
+  j=replicate(d, sample(x=1:d, size=m, replace=FALSE)), x=1/m, dims=c(d, d))
 
 # exact log determinant
 #det1 <- sar_lndet(ldetflag=0, W, rmin=-1, rmax=1)
