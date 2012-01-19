@@ -148,8 +148,14 @@ draw_rho2 <- function(detval1, detval2, detval1sq, yy, epe0, eped, epe0d, rho, n
 # @param ndraw number of MCMC iterations
 # @param burn.in  number of MCMC burn-in to be discarded
 # @param thinning MCMC thinning factor, defaults to 1
-sar_probit_mcmc <- function(y, X, W, ndraw=1000, burn.in=100, thinning=1, prior, start=list(rho=0.75, beta=rep(0, ncol(X)))){  
+# @param m number of burn.in sampling in inner Gibbs sampling
+sar_probit_mcmc <- function(y, X, W, ndraw=1000, burn.in=100, thinning=1, 
+  prior=list(a1=1, a2=1, c=rep(0, ncol(X)), T=diag(ncol(X))*1e12), start=list(rho=0.75, beta=rep(0, ncol(X))),
+  m=10){  
 
+  #start timer
+  timet <- Sys.time()
+  
   n <- nrow( X )             # number of observations
   k <- ncol( X )             # number of of parameters/exogenous variables
   I_n <- sparseMatrix(i=1:n, j=1:n, x=1) # sparse identity matrix
@@ -157,8 +163,16 @@ sar_probit_mcmc <- function(y, X, W, ndraw=1000, burn.in=100, thinning=1, prior,
   # MCMC sampling of beta
   rho  <- start$rho          # start value of row
   beta <- start$beta         # start value of parameters, prior value, we could also sample from beta ~ N(c, T)
-  c <- rep(0, k)             # prior distribution of beta ~ N(c, T)
-  T <- diag(k)               # prior distribution of beta ~ N(c, T)
+  
+  # conjugate prior beta ~ N(c, T)
+  # TODO: parametrize, default to diffuse prior, for beta, e.g. T <- diag(k) * 1e12
+  c <- rep(0, k)             # prior distribution of beta ~ N(c, T) : c = 0
+  if (is.matrix(prior$T) && ncol(prior$T) == k && isSymmetric(prior$T) && det(prior$T) > 0) {
+    T <- prior$T               # prior distribution of beta ~ N(c, T) : T = I_n --> diffuse prior
+  } else {
+    T <- diag(k)*1e12
+  }
+  
   Tinv <- solve(T)           # T^{-1}
   S <- I_n - rho * W
   H <- t(S) %*% S            # precision matrix H for beta | rho, z, y
@@ -184,8 +198,7 @@ sar_probit_mcmc <- function(y, X, W, ndraw=1000, burn.in=100, thinning=1, prior,
   detval2  <- detval[,2]
   detval1sq <- detval1 * detval1
   yy        <- (detval1[2:nrho] + detval1[1:(nrho-1)])
-
-  
+    
   # matrix to store the beta + rho parameters for each iteration/draw
   B <- matrix(NA, ndraw, k+1)
   
@@ -193,9 +206,9 @@ sar_probit_mcmc <- function(y, X, W, ndraw=1000, burn.in=100, thinning=1, prior,
   pb <- txtProgressBar(min=0, max=(thinning * ndraw + burn.in), initial=0, style=3)
   
   # immutable matrices
-  tX <- t(X)                       # X'
-  xpx  <- t(X) %*% X               # (X'X)
-  xpxI <- solve(xpx)               # (X'X)^{-1}
+  tX <- t(X)                       # X'               # k x n
+  xpx  <- t(X) %*% X               # (X'X)            # k x k
+  xpxI <- solve(xpx)               # (X'X)^{-1}       # k x k
   #xxpxIxp <- X %*% xpxI %*% tX    # X(X'X)^(-1)X'    # n x n (argh!)
   xxpxI    <- X %*% xpxI           # X(X'X)^(-1)     # n x k (better, compromise)
   AA       <- solve(xpx + Tinv)    # (X'X + T^{-1})^{-1}
@@ -205,11 +218,15 @@ sar_probit_mcmc <- function(y, X, W, ndraw=1000, burn.in=100, thinning=1, prior,
   # beta = c + betadraws ~ N(c, T)
   betadraws <- rmvnorm(n=(burn.in + ndraw * thinning), mean=rep(0, k), sigma=AA)
   
+  # just to set a start value for z
+  z <- rep(0, n)
+  
   for (i in (1 - burn.in):(ndraw * thinning)) {
   
   # 1. sample from z | rho, beta, y using precision matrix H
-  # solving equation (I_n - rho * W) mu = X beta instead of  inverting S = I_n - rho * W
-  # as in mu = ( In -  rho W)^{-1} X beta
+  # solving equation 
+  # (I_n - rho * W) mu = X beta 
+  # instead of inverting S = I_n - rho * W as in mu = ( In -  rho W)^{-1} X beta.
   # do not try to use neither this slow version
   # mu <- qr.solve(S, X %*% beta)
   # nor this memory-consuming versions
@@ -218,12 +235,15 @@ sar_probit_mcmc <- function(y, X, W, ndraw=1000, burn.in=100, thinning=1, prior,
   QR <- qr(S)  # class "sparseQR"
   mu <- solve(QR, X %*% beta)
   
-  # see LeSage (2009) for choice of burn-in size, often m=10 is used!
-  # TODO: we can also use m=1 together with start.value=z, see LeSage (2009), section 10.1.5
-  z <- as.double(rtmvnorm.sparseMatrix(n=1, mean=mu, H=H, 
-    lower=lower, upper=upper, burn.in=1, start.value=as.double(z)))
-  #z <- as.double(rtmvnorm.gibbs.Fortran(n=1, mean=mu, H=H, 
-  #  lower=lower, upper=upper, burn.in=10))
+  # see LeSage (2009) for choice of burn-in size, often m=5 or m=10 is used!
+  # we can also use m=1 together with start.value=z, see LeSage (2009), section 10.1.5
+  if (m==1) {
+    z <- as.double(rtmvnorm.sparseMatrix(n=1, mean=mu, H=H, 
+      lower=lower, upper=upper, burn.in=m, start.value=z))
+  } else {
+    z <- as.double(rtmvnorm.sparseMatrix(n=1, mean=mu, H=H, 
+      lower=lower, upper=upper, burn.in=m))
+  }
     
   # 2. sample from beta | rho, z, y
   c <- AA  %*% (tX %*% S %*% z + Tinv %*% c)
@@ -240,11 +260,6 @@ sar_probit_mcmc <- function(y, X, W, ndraw=1000, burn.in=100, thinning=1, prior,
   Wz   <- as.double(W %*% z) # Wz        # SW: coerce Wz to vector 
   # (from n x 1 sparse matrix! we do not need a sparse matrix here)
   xpWz <- tX %*% Wz          # X'Wz      # k x 1
-  #c0   <-  xpxI %*% xpz     #(X'X)^-1 X'z
-  #cd   <-  xpxI %*% xpWz    #(X'X)^(-1) * X'Wz
-  #e0   <-  z - X %*% c0      # z  - X(X'X)^-1X' z
-  #ed   <- Wz - X %*% cd      # Wz - X(X'X)^(-1)X'Wz
-  # SW: tried to avoid some matrix multiplications here, dropped c0 and d0
   e0   <-  z - xxpxI %*% xpz  # z  - X(X'X)^-1X' z
   ed   <- Wz - xxpxI %*% xpWz # Wz - X(X'X)^(-1)X'Wz
   epe0 <- as.double(crossprod(e0))  # slightly faster than t(e0) %*% e0
@@ -272,6 +287,7 @@ sar_probit_mcmc <- function(y, X, W, ndraw=1000, burn.in=100, thinning=1, prior,
   
   # result
   results       <- NULL
+  results$time  <- Sys.time() - timet
   results$nobs  <- n          # number of observations
   results$nvar  <- k          # number of explanatory variables
   results$y     <- y 
@@ -310,21 +326,17 @@ summary.sarprobit <- function(object, var_names=NULL, file=NULL, ...){
   nvar      <- object$nvar
   ndraw     <- object$ndraw
   nomit     <- object$nomit
+  draws     <- object$B
+  
   #bayesian estimation
-  bout_mean <- as.matrix(c(apply(object$bdraw,2,mean),mean(object$pdraw))) #parameter mean column
-  bout_sd   <- as.matrix(c(apply(object$bdraw,2,sd)  ,sd(object$pdraw))) #parameter sd colum
-  bout_sig  <- matrix(data=NA, nrow=nrow(bout_mean),ncol=1)
+  bout_mean <- object$coefficients                         #parameter mean column
+  bout_sd   <- apply(draws, 2, sd)                         #parameter sd colum
   #build bayesian significance levels
-  draws     <- cbind( object$bdraw, object$pdraw )
-  for( i in 1:ncol(draws) ){
-    if( bout_mean[i,1] > 0){
-      cnt <- which( draws[,i] > 0 )
-    }else{
-      cnt <- which( draws[,i] < 0 )
-    }
-    bout_sig[i,1] <- 1 - (length(cnt)/(ndraw-nomit))
-  }
-  #standar assymptotic measures
+  #SW: Für alle Parameter > 0: P(X >= 0)
+  # for parameter > 0 count all draws > 0  and determine P(X <= 0)
+  # for parameter <= 0 count all draws <0  and determine P(X >= 0)
+  bout_sig <- 1 - apply(draws, 2, function(x) { ifelse (mean(x) > 0, sum(x > 0), sum(x < 0)) }) / ndraw
+  #standard asymptotic measures
   bout_t    <- bout_mean / bout_sd             #t score b/se
   bout_tPval<- (1 - pt( abs(bout_t), nobs ))*2 #two tailed test = zero probability = z-prob
   #name definition
@@ -338,7 +350,7 @@ summary.sarprobit <- function(object, var_names=NULL, file=NULL, ...){
   #HEADER
   write(sprintf("------------MCMC spatial autoregressive probit------------"), file, append=T)
   #sprintf("Dependent Variable")
-  write(sprintf("Execution time  = %6.3f", object$time)  , file, append=T)
+  write(sprintf("Execution time  = %6.3f %s", object$time, attr(object$time, "units"))  , file, append=T)
   write(sprintf("N steps for TMVN= %6d"  , object$nsteps), file, append=T)
   write(sprintf("N draws         = %6d, N omit (burn-in)= %6d", ndraw, nomit), file, append=T)
   write(sprintf("N observations  = %6d, K covariates    = %6d", nobs, nvar)  , file, append=T)
@@ -347,23 +359,11 @@ summary.sarprobit <- function(object, var_names=NULL, file=NULL, ...){
   write(sprintf("----------------------------------------------------------"), file, append=T)
   write(sprintf(""), file, append=T)
   #ESTIMATION RESULTS
-  write(sprintf("%30s   %15s %15s %15s %15s %15s", 
-                'Parameter Name', 
-                'Coefficient', 
-                'Standard Dev', 
-                'Bayes p-level', 
-                't-score',
-                'z-prob'), file, append=T)
-  for( i in 1:nrow(bout_mean)){
-    write(sprintf("%30s   % 15.4f % 15.4f % 15.4f % 15.4f % 15.4f", 
-                  bout_names[i,1], 
-                  bout_mean[i,1], 
-                  bout_sd[i,1], 
-                  bout_sig[i,1],
-                  bout_t[i,1],
-                  bout_tPval[i,1]
-          ), file, append=T)          
-  }
+  coefficients <- cbind(bout_mean, bout_sd, bout_sig, bout_t, bout_tPval)
+  dimnames(coefficients) <- list(bout_names, 
+        c("Estimate", "Std. Dev", "Bayes p-level", "t-value", "Pr(>|z|)"))
+  printCoefmat(coefficients, digits = max(3, getOption("digits") - 3),
+    signif.stars = getOption("show.signif.stars"))       
 }
 
 # extract the coefficients
