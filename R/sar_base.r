@@ -270,48 +270,6 @@ chebyshev <- function(j, q, alpha){
   c1 <- (2/(q+1)) * c0
   return(c1)
 }
-
-# PURPOSE:
-# ---------------------------------------------------
-#  USAGE: 
-#
-#  results.rmin 
-#  results.rmax maximum eigen value
-#  results.time execution time
-# ---------------------------------------------------
-#where epe0 <- t(e0) %*% e0
-#      eped <- t(ed) %*% ed
-#      epe0d<- t(ed) %*% e0
-draw_rho <- function(detval,epe0,eped,epe0d,n,k,rho,a1,a2){
-  nmk     <- (n-k)/2
-  nrho    <- nrow(detval)
-  iota    <- ones(nrho,1)
-  #LeSage 2009 page 132 justifies the code below
-  z       <-  epe0 * iota - 2*detval[,1] * epe0d + (detval[,1] * detval[,1]) * eped #CHECK epe %*% vs *
-  z       <- -nmk * log(z)
-  #C = gammaln(nmk)*iota -nmk*log(2*pi)*iota - 0.5*logdetx*iota;
-  den     <- detval[,2] + z
-  bprior  <- beta_prior(detval[,1],a1,a2)
-  den     <- den + log(bprior)
-  n       <- length(den)
-  y       <- as.matrix( detval[ ,1] )
-  adj     <- max(den)
-  den     <- den - adj
-  x       <- exp(den)
-  # trapezoid rule used for numerical integral approximation
-  isum    <- sum((y[2:n,1] + y[1:(n-1),1]) * (x[2:n,1] - x[1:(n-1),1])/2) 
-  z       <- abs(x/isum)
-  den     <- cumsum(z)
-  rnd     <- runif(1,min=0,max=1)*sum(z)
-  ind     <- which( den <= rnd )
-  idraw   <- max(ind) #returns -inf if the ind lis is empty
-  if (  idraw > 0 && idraw < nrho ){
-    results <- detval[idraw,1]
-  }else{
-    results <- rho
-  }
-  return( results )
-}
     
 # PURPOSE: returns a vector of the log-marginal over a grid of rho-values
 # -------------------------------------------------------------------------
