@@ -53,6 +53,7 @@ buildSpatialWeightMatrix <- function(X, m=6) {
 # @param iiter number of MCMC iterations (we run this 50 times)
 # @return (n x o) matrix with tr(W^i) in each column, for i=1..,o
 tracesWi <- function(W, o=100, iiter=50) {
+  n <- nrow(W)
   trW_i <- matrix( data=0, nrow=n, ncol=o )   # n x 100
   for( iii in 1:iiter ){
     u        <- rnorm(n)         #u    -> n x 1      # randn() aus Paket pracma
