@@ -127,9 +127,12 @@ sar_lndet <- function(ldetflag,W,rmin,rmax){
     # use Pace and Barry, 1999 MC approximation
     # use Pace and Barry, 1998 spline interpolation
     stop('sar_lndet: method not implemented')
-  }  
-  interpolation <- aspline(x=tmp$rho, y=tmp$lndet, xout=seq(rmin,rmax,0.001))
-  n             <- length( interpolation$x )
+  }
+  # replace +Inf and -Inf by NA, otherwise spline() function crashes
+  tmp$lndet[is.infinite(tmp$lndet)] <- NA  
+  
+  interpolation <- aspline(x=tmp$rho, y=tmp$lndet, xout=seq(rmin, rmax,0.001))
+  n             <- length( interpolation$x)
   results$detval<- Matrix(data=0, nrow=n, ncol=2 )
   results$detval[,1]<-interpolation$x
   results$detval[,2]<-interpolation$y
@@ -165,8 +168,11 @@ sar_lndet <- function(ldetflag,W,rmin,rmax){
 # Carnegie Mellon University
 # Dept. Engineering & Public Policy
 
-lndetfull <- function( W, lmin, lmax ){
-  rvec    <- seq(lmin, lmax, 0.01)
+# @param W spatial weight matrix
+# @param rmin
+# @param rmax
+lndetfull <- function( W, rmin, rmax ){
+  rvec    <- seq(rmin, rmax, 0.01)
   In      <- speye(nrow(W))
   niter   <- length(rvec)
   
@@ -178,10 +184,7 @@ lndetfull <- function( W, lmin, lmax ){
     rho             <- rvec[i]
     z               <- In - rho*W
     results$rho[i]  <- rho
-    #save(z, file="I:/R/spatialprobit/z.RData")
-    #print(class(z)) 
     results$lndet[i]<- as.real(determinant(z, log=TRUE)$modulus) 
-    #results$lndet[i]<- det(z, log=TRUE)
   }  
   return(results)
 }
@@ -203,7 +206,7 @@ lndetfull <- function( W, lmin, lmax ){
 # Carnegie Mellon University
 # Dept. Engineering & Public Policy
 
-lndetChebyshev <- function(W, lmin=-1, lmax=1){
+lndetChebyshev <- function(W, rmin=-1, rmax=1){
   results       <- NULL
   results$rho   <- NULL
   results$lndet <- NULL
@@ -231,7 +234,7 @@ lndetChebyshev <- function(W, lmin=-1, lmax=1){
   ) 
   
   q    <- 4
-  rvec <- seq(lmin, lmax, 0.01)
+  rvec <- seq(rmin, rmax, 0.01)
   niter<- length(rvec)
   for( i in 1:niter ){
     alpha <- rvec[ i ]

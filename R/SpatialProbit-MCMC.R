@@ -9,7 +9,7 @@
 
 library(tmvtnorm)
 library(mvtnorm)
-library(Matrix)   # sparseMatrix
+library(Matrix)    # sparseMatrix
 #library(compile)  # compiled byte code
 
 # source the "sar_base.r" and all dependent files
@@ -213,9 +213,9 @@ sar_probit_mcmc <- function(y, X, W, ndraw=1000, burn.in=100, thinning=1,
   betadraws <- rmvnorm(n=(burn.in + ndraw * thinning), mean=rep(0, k), sigma=AA)
   
   # matrices for direct and indirect impacts
-  direct       <- matrix(NA, ndraw-burn.in,p)    # n x p
-  indirect     <- matrix(NA, ndraw-burn.in,p)    # n x p
-  total        <- matrix(NA, ndraw-burn.in,p)    # n x p
+  direct       <- matrix(NA, ndraw,p)    # n x p
+  indirect     <- matrix(NA, ndraw,p)    # n x p
+  total        <- matrix(NA, ndraw,p)    # n x p
   avg_total    <- rep(0,p)                       # p x 1
   avg_direct   <- rep(0,p)                       # p x 1
   avg_indirect <- rep(0,p)                       # p x 1
@@ -363,7 +363,7 @@ sar_probit_mcmc <- function(y, X, W, ndraw=1000, burn.in=100, thinning=1,
 # compile functions
 #sar_probit_mcmc_comp <- cmpfun(sar_probit_mcmc)
 
-summary.sarprobit <- function(object, var_names=NULL, file=NULL, ...){
+summary.sarprobit <- function(object, var_names=NULL, file=NULL, digits = max(3, getOption("digits")-3), ...){
   # TODO: check for class "sarprobit"
   if (!inherits(object, "sarprobit")) 
         stop("use only with \"sarprobit\" objects")
@@ -393,7 +393,7 @@ summary.sarprobit <- function(object, var_names=NULL, file=NULL, ...){
   
   if(is.null(file)){file <- ""}#output to the console
   #HEADER
-  write(sprintf("------------MCMC spatial autoregressive probit------------"), file, append=T)
+  write(sprintf("--------MCMC spatial autoregressive probit--------"), file, append=T)
   #sprintf("Dependent Variable")
   write(sprintf("Execution time  = %6.3f %s", object$time, attr(object$time, "units"))  , file, append=T)
   write(sprintf("N steps for TMVN= %6d"  , object$nsteps), file, append=T)
@@ -401,14 +401,24 @@ summary.sarprobit <- function(object, var_names=NULL, file=NULL, ...){
   write(sprintf("N observations  = %6d, K covariates    = %6d", nobs, nvar)  , file, append=T)
   write(sprintf("# fo 0 Y values = %6d, # of 1 Y values = %6d", object$zip, nobs - object$zip) , file, append=T)
   write(sprintf("Min rho         = % 6.3f, Max rho         = % 6.3f", object$rmin, object$rmax), file, append=T)
-  write(sprintf("----------------------------------------------------------"), file, append=T)
+  write(sprintf("--------------------------------------------------"), file, append=T)
   write(sprintf(""), file, append=T)
   #ESTIMATION RESULTS
   coefficients <- cbind(bout_mean, bout_sd, bout_sig, bout_t, bout_tPval)
   dimnames(coefficients) <- list(bout_names, 
         c("Estimate", "Std. Dev", "Bayes p-level", "t-value", "Pr(>|z|)"))
-  printCoefmat(coefficients, digits = max(3, getOption("digits") - 3),
-    signif.stars = getOption("show.signif.stars"))       
+  printCoefmat(coefficients, digits = digits,
+    signif.stars = FALSE)
+  if (getOption("show.signif.stars")) {               
+    # The solution: using cat() instead of print() and use line breaks
+    # cat(paste(strwrap(x, width = 70), collapse = "\\\\\n"), "\n")
+    # http://r.789695.n4.nabble.com/Sweave-line-breaks-td2307755.html
+    Signif <- symnum(1e-6, corr = FALSE, na = FALSE,
+                  cutpoints = c(0, 0.001, 0.01, 0.05, 0.1, 1),
+                  symbols = c("***", "**", "*", ".", " "))
+    x <- paste("Signif. codes: ", attr(Signif, "legend"), "\n", sep="")
+    cat(paste(strwrap(x, width = getOption("width")), collapse = "\\\\\n"), "\n")
+  }
 }
 
 # c.sarprobit works in the same way as boot:::c.boot().

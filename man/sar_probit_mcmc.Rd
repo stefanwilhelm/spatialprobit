@@ -3,7 +3,7 @@
 \title{Bayesian estimation of the spatial probit model}
 
 \description{
-Bayesian estimation of the spatial autoregressive probit model.
+Bayesian estimation of the spatial autoregressive probit model (SAR probit model).
 }
 
 \usage{
@@ -20,7 +20,7 @@ sar_probit_mcmc(y, X, W, ndraw = 1000, burn.in = 100, thinning = 1,
   \item{burn.in}{number of MCMC burn-in to be discarded}
   \item{thinning}{MCMC thinning factor, defaults to 1.}
   \item{prior}{A list of prior settings for 
-               \eqn{\rho \sim beta(a1,a2)}{or rho ~ beta(a1,a2)} 
+               \eqn{\rho \sim Beta(a1,a2)}{or rho ~ Beta(a1,a2)} 
                and \eqn{\beta \sim N(c,T)}{beta ~ N(c,T)}. Defaults to diffuse prior for beta.}
   \item{start}{list of start values}
   \item{m}{Number of burn-in samples in innermost Gibbs sampler. Defaults to 10.}
@@ -37,12 +37,12 @@ where y is a binary 0,1 \eqn{(n \times 1)}{(n x 1)} vector of observations,
 \eqn{\beta}{beta} is a \eqn{(k \times 1)}{(k x 1)} vector of parameters associated with the \eqn{(n \times k)}{(n x k)} data matrix X.
 
 The prior distributions are 
- \eqn{\beta \sim N(c,T)}{beta ~ N(c,T)}, \\
- \eqn{1/sige \sim \Gamma(nu,d0)}{1/sige ~ Gamma(nu,d0)}, 
+ \eqn{\beta \sim N(c,T)}{beta ~ N(c,T)}, 
+ \eqn{1/sige \sim \Gamma(\nu,d0)}{1/sige ~ Gamma(nu,d0)}, 
  and  
- \eqn{\rho \sim Uniform(rmin,rmax)}{rho ~ Uniform(rmin,rmax)} 
+ \eqn{\rho \sim Uni(rmin,rmax)}{rho ~ Uni(rmin,rmax)} 
  or 
- \eqn{\rho \sim beta(a1,a2)}{or rho ~ beta(a1,a2)}.
+ \eqn{\rho \sim Beta(a1,a2)}{or rho ~ Beta(a1,a2)}.
 }
 \value{
 Returns a structure of class \code{sarprobit}:
