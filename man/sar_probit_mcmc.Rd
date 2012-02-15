@@ -1,4 +1,4 @@
-\name{sar_probit_mcmc}
+\name{sarprobit}
 \alias{sar_probit_mcmc}
 \alias{sarprobit}
 \title{Bayesian estimation of the spatial probit model}
