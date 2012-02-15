@@ -5,7 +5,7 @@ Plot Diagnostics for an \code{sarprobit} Object
 }
 \description{
 Three plots (selectable by which) are currently available:
-MCMC trace plots, autocorrelation plots and posterior density plots
+MCMC trace plots, autocorrelation plots and posterior density plots.
 }
 \usage{
 \method{plot}{sarprobit}(x, 
@@ -24,46 +24,42 @@ trueparam = NULL)
 }
 
 \author{
-Stefan Wilhelm <stefan.wilhelm@financial.com>
+Stefan Wilhelm <wilhelm@financial.com>
 }
 
 \examples{
-##---- Should be DIRECTLY executable !! ----
-##-- ==>  Define data, use random,
-##--	or do  help(data=index)  for the standard data sets.
+\dontrun{
+library(Matrix)
+# number of observations
+n <- 200
 
-## The function is currently defined as
-function (x, which = c(1, 2, 3), trueparam = NULL) 
-{
-    names <- x$names
-    B <- x$B
-    k <- ncol(B)
-    show <- rep(FALSE, 3)
-    show[which] <- TRUE
-    if (show[1L]) {
-        for (i in 1:k) {
-            plot(1:nrow(B), B[, i], type = "l", main = substitute("Trace plot of " * 
-                x, list(x = names[i])))
-            if (!is.null(trueparam)) 
-                abline(h = trueparam[i], col = "red", lty = 2)
-        }
-    }
-    if (show[2L]) {
-        for (i in 1:k) {
-            acf(B[, i], main = substitute("ACF of " * x, list(x = names[i])))
-        }
-    }
-    if (show[3L]) {
-        for (i in 1:k) {
-            plot(density(B[, i]), main = substitute("Posterior distribution of " * 
-                x, list(x = names[i])))
-            if (!is.null(trueparam)) 
-                abline(v = trueparam[i], col = "red", lty = 2)
-        }
-    }
-  }
+# true parameters
+beta <- c(0, 1, -1)
+rho <- 0.75
+
+# design matrix with two standard normal variates as "covariates"
+X <- cbind(intercept=1, x=rnorm(n), y=rnorm(n))
+
+# sparse identity matrix
+I_n <- sparseMatrix(i=1:n, j=1:n, x=1)
+
+# number of nearest neighbors in spatial weight matrix W
+m <- 6
+
+# spatial weight matrix with m=6 nearest neighbors
+W <- sparseMatrix(i=rep(1:n, each=m), 
+  j=replicate(n, sample(x=1:n, size=m, replace=FALSE)), x=1/m, dims=c(n, n))
+
+# innovations
+eps <- rnorm(n=n, mean=0, sd=1)
+
+# generate data from model 
+S <- I_n - rho * W
+z <- solve(qr(S), X \%*\% beta + eps)
+y <- as.vector(z >= 0)  # 0 or 1, FALSE or TRUE
+
+# estimate SAR probit model
+fit1 <- sar_probit_mcmc(y, X, W, ndraw=500, burn.in=100, thinning=1, prior=NULL)
+plot(fit1, which=c(1,3))
 }
-% Add one or more standard keywords, see file 'KEYWORDS' in the
-% R documentation directory.
-\keyword{ ~kwd1 }
-\keyword{ ~kwd2 }% __ONLY ONE__ keyword per line
+}

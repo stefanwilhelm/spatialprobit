@@ -5,7 +5,8 @@
 Print the results of the SAR probit estimation via MCMC
 }
 \usage{
-\method{summary}{sarprobit}(object, var_names = NULL, file = NULL, digits = max(3, getOption("digits")-3), ...)
+\method{summary}{sarprobit}(object, var_names = NULL, file = NULL, 
+  digits = max(3, getOption("digits")-3), ...)
 }
 \arguments{
   \item{object}{class \code{sarprobit} with the results from \code{sar_probit_mcmc}}
@@ -18,7 +19,7 @@ Print the results of the SAR probit estimation via MCMC
 This functions does not return any values.
 }
 \author{
-Miguel Godinho de Matos <miguelgodinhomatos@cmu.edu>
+Miguel Godinho de Matos <miguelgodinhomatos@cmu.edu>, Stefan Wilhelm <wilhelm@financial.com>
 }
 
 \examples{

@@ -43,10 +43,10 @@ Bayesian estimates of the spatial autoregressive probit model
 }  
 where y is a binary 0,1 \eqn{(n \times 1)}{(n x 1)} vector of observations, 
 \eqn{\beta}{beta} is a \eqn{(k \times 1)}{(k x 1)} vector of parameters associated with the \eqn{(n \times k)}{(n x k)} data matrix X.
+The error variance \eqn{\sigma_e}{sigma_e} is set to 1 for identification.
 
 The prior distributions are 
- \eqn{\beta \sim N(c,T)}{beta ~ N(c,T)}, 
- \eqn{1/sige \sim \Gamma(\nu,d0)}{1/sige ~ Gamma(nu,d0)}, 
+ \eqn{\beta \sim N(c,T)}{beta ~ N(c,T)} 
  and  
  \eqn{\rho \sim Uni(rmin,rmax)}{rho ~ Uni(rmin,rmax)} 
  or 
@@ -98,7 +98,7 @@ LeSage, J. and Pace, R. K. (2009), \emph{Introduction to Spatial Econometrics}, 
 }
 
 \author{
-Stefan Wilhelm <stefan.wilhelm@financial.com>, Miguel Godinho de Matos <miguelgodinhomatos@cmu.edu>
+Stefan Wilhelm <wilhelm@financial.com>, Miguel Godinho de Matos <miguelgodinhomatos@cmu.edu>
 }
 
 \seealso{
