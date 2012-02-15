@@ -1,15 +1,7 @@
 require(Matrix)
 require(akima)         #provides interpolation functions
-#require(fAsianOptions) #provides gamma functions among other things
 
-
-#source("util/matrix_operations.r")
-#source("util/stats_distributions.r")
-#source("util/stats_conf_intervals.r")
-#source("weights/make_neighborsw.r")
-#source("sar_prt.r")
-
-# PURPOSE: check if a matrix has an intercetp in the
+# PURPOSE: check if a matrix has an intercept in the
 #          first row
 # ---------------------------------------------------
 #  USAGE: has_intercept( x )
@@ -24,7 +16,7 @@ require(akima)         #provides interpolation functions
 has_intercept <- function( x ){
   n         <- nrow(x)
   k         <- ncol(x)
-  intercept <- ones(n,1)
+  intercept <- rep(1, n)
   results   <- FALSE
   for( c in 1:k ){
     check <- which( intercept == x[ ,c] )

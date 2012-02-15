@@ -103,6 +103,33 @@ draw_rho <- function (detval1, detval2, detval1sq, yy, epe0, eped, epe0d,
     return(results)
 }
 
+sarprobit <- function(formula, W, data, subset, ...) {
+  cl <- match.call()                     # cl ist object of class "call"
+  mf <- match.call(expand.dots = FALSE)  # mf ist object of class "call"
+  m  <- match(c("formula", "data", "subset"), names(mf), 0L)        # m ist indexvector
+  mf <- mf[c(1L, m)]
+  mf$drop.unused.levels <- TRUE
+  mf[[1L]] <- as.name("model.frame")
+  mf <- eval(mf, parent.frame())         # Ab hier ist mf ein data.frame
+  #if (method == "model.frame") 
+  #  return(mf)
+  mt <- attr(mf, "terms")                # mt ist object von class "terms" und "formula"
+  y <- model.response(mf, "numeric")
+  if (!is.null(W) && !is.numeric(W) && !inherits(W, "sparseMatrix") && nrow(W) != NROW(y)) 
+    stop(gettextf("'W' must be a numeric square matrix, dimension %d should equal %d (number of observations)",
+      NROW(W), NROW(y)), domain = NA)
+  
+  X <- model.matrix(mt, mf, contrasts)
+  sar_probit_mcmc(y, X, W, ...)    
+}
+
+if (FALSE) {
+#debug(sarprobit)
+CMK <- data.frame(y=c(0, 0, 1), x=c(1, 2, 3), income=c(1000, 500, 4000))
+W <- sparseMatrix(i=1:3, j=c(3, 1, 2), x=c(1, 1, 1))
+sarprobit(y ~ income, W, data=CMK, ndraw=100)
+}
+
 # Estimate the spatial probit model 
 # z = rho * W + X \beta + epsilon
 # where y = 1 if z >= 0 and y = 0 if z < 0 observable
@@ -293,23 +320,27 @@ sar_probit_mcmc <- function(y, X, W, ndraw=1000, burn.in=100, thinning=1,
   
     # SW: beff is parameter vector without constant!
     # SW: Do we have to compute impacts in every MCMC round or just once at the end?
-    # SW: See LeSage (2009), section 5.6.2., p.149 for spatial effects estimation in MCMC
+    # SW: See LeSage (2009), section 5.6.2., p.149/150 for spatial effects estimation in MCMC
+    #  direct: M_r(D) = n^{-1} tr(S_r(W))           # SW: efficient approaches available, see chapter 4, pp.114/115
+    #   total: M_r(T) = n^{-1} 1'_n S_r(W) 1_n      # SW: Problem: 1'_n S_r(W) 1_n ist dense!
+    # indirect: M_r(I) = M_r(T) - M_r(D)
     # SW: See LeSage (2009), section 10.1.6, p.293 for Marginal effects in SAR probit
     #hhI   <- qr.solve(I_n - rho * W)       # SW: ist das nicht eine dense matrix!?? Oder nur ein Vektor?
     #s     <- hhI %*% I_n                   # SW: warum mit In multiplizieren? s = (In - rho * W)^{-1} !?
     # TODO: s is a dense matrix!!!
-    pdfz      <- matrix(dnorm(as.double(mu)), ncol=1)  # standard normal pdf
+    pdfz      <- matrix(dnorm(as.double(mu)), ncol=1)  # standard normal pdf phi(mu)
     #dd        <- sparseMatrix(i=1:n,j=1:n, x=as.double(pdfz))         # dd is a sparse diagonal matrix (n x n)
     
     dir      <- as.real(t(pdfz) %*% trW.i %*% rhovec /n)
+    # direct impact : dy_i / d X_ir
+    avg_direct     <- dir * beff
+      
     for(r in 1:p ){
-      # direct impact : dy_i / d X_ir
-      avg_direct[r]     <- dir * beff[r]
       #tmp               <- apply( dd %*% s * beff[r], 2, sum )  # phi(mu) wird auf die Diagonalelemente draufmultipliziert...
       #avg_total[r]      <- mean( tmp ) 
       #total_obs[ ,r]    <- total_obs[,r] + tmp 
-      #avg_indirect[r]   <- avg_total[r] - avg_direct[r]
-    }  
+    }
+    avg_indirect       <- avg_total - avg_direct    # (r x 1)
     #total[ind, ]      <- avg_total    # an (ndraw-nomit x p) matrix
     direct[ind, ]     <- avg_direct   # an (ndraw-nomit x p) matrix
     #indirect[ind, ]   <- avg_indirect # an (ndraw-nomit x p) matrix

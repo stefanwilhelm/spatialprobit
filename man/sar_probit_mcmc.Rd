@@ -46,23 +46,19 @@ The prior distributions are
 }
 \value{
 Returns a structure of class \code{sarprobit}:
-\item{meth }{ 'sarp_g' }
+%\item{meth }{ 'sarprobit' }
 \item{beta }{ posterior mean of bhat based on draws }
 \item{rho }{ posterior mean of rho based on draws }
-\item{sige }{ posterior mean of sige based on draws }
-\item{sigma }{ posterior mean of sige based on (e'*e)/(n-k) }
-\item{bdraw }{ bhat draws (ndraw-nomit x nvar) }
+\item{bdraw }{ beta draws (ndraw-nomit x nvar) }
 \item{pdraw }{ rho  draws (ndraw-nomit x 1) }
-\item{sdraw }{ sige draws (ndraw-nomit x 1) }
+%\item{sdraw }{ sige draws (ndraw-nomit x 1) }
 \item{total }{ a matrix (ndraw,nvars-1) total x-impacts }
 \item{direct }{ a matrix (ndraw,nvars-1) direct x-impacts }
 \item{indirect }{ a matrix (ndraw,nvars-1) indirect x-impacts }
-\item{total_obs }{ a matrix (ndraw,nvars-1) observation-level total x-impacts }
-\item{vmean }{ mean of vi draws (nobs x 1) } 
+%\item{total_obs }{ a matrix (ndraw,nvars-1) observation-level total x-impacts }
 \item{rdraw }{ r draws (ndraw-nomit x 1) (if m,k input) }
-\item{bmean }{ b prior means, prior.beta from input }
-\item{bstd }{ b prior std deviations sqrt(diag(prior.bcov)) }
-\item{novi }{ 1 for prior.novi = 1, 0 for prior.rval input }
+%\item{bmean }{ b prior means, prior.beta from input }
+%\item{bstd }{ b prior std deviations sqrt(diag(prior.bcov)) }
 \item{nobs }{ # of observations }
 \item{nvar }{ # of variables in x-matrix }
 \item{ndraw }{ # of draws }
@@ -70,30 +66,24 @@ Returns a structure of class \code{sarprobit}:
 \item{nsteps }{ # of samples used by Gibbs sampler for TMVN }
 \item{y }{ y-vector from input (nobs x 1) }
 \item{zip }{ # of zero y-values }
-\item{yhat }{ mean of posterior predicted (nobs x 1) }
-\item{resid }{ residuals, based on posterior means }
-\item{rsqr }{ r-squared based on posterior means }
-\item{rbar }{ adjusted r-squared }
+%\item{yhat }{ mean of posterior predicted (nobs x 1) }
+%\item{resid }{ residuals, based on posterior means }
+%\item{rsqr }{ r-squared based on posterior means }
+%\item{rbar }{ adjusted r-squared }
 \item{a1 }{ a1 parameter for beta prior on rho from input, or default value }
 \item{a2 }{ a2 parameter for beta prior on rho from input, or default value }
-\item{time1 }{ time for eigenvalue calculation }
-\item{time2 }{ time for log determinant calcluation }
-\item{time3 }{ time for sampling }
 \item{time }{ total time taken }  
 \item{rmax }{ 1/max eigenvalue of W (or rmax if input) }
 \item{rmin }{ 1/min eigenvalue of W (or rmin if input) }          
 \item{tflag }{ 'plevel' (default) for printing p-levels; 
                'tstat' for printing bogus t-statistics }
 \item{lflag }{ lflag from input }
-\item{cflag }{  1 for intercept term, 0 for no intercept term }
-\item{iter }{  prior.iter option from input }
-\item{order }{  prior.order option from input }
-\item{limit }{  matrix of [rho lower95,logdet approx, upper95],  
-                intervals for the case of lflag = 1 }
+\item{cflag }{ 1 for intercept term, 0 for no intercept term }
+%\item{iter }{  prior.iter option from input }
 \item{lndet }{ a matrix containing log-determinant information
-                       (for use in later function calls to save time) }
-\item{mlike }{ log marginal likelihood (a vector ranging over
-                       rho values that can be integrated for model comparison) }
+               (for use in later function calls to save time) }
+%\item{mlike }{ log marginal likelihood (a vector ranging over
+%               rho values that can be integrated for model comparison) }
 }
 \references{
 LeSage, J. and Pace, R. K. (2009), \emph{Introduction to Spatial Econometrics}, CRC Press, chapter 10 
