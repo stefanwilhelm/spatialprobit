@@ -1,5 +1,6 @@
 \name{sar_probit_mcmc}
 \alias{sar_probit_mcmc}
+\alias{sarprobit}
 \title{Bayesian estimation of the spatial probit model}
 
 \description{
@@ -7,6 +8,7 @@ Bayesian estimation of the spatial autoregressive probit model (SAR probit model
 }
 
 \usage{
+sarprobit <- function(formula, W, data, subset, ...)
 sar_probit_mcmc(y, X, W, ndraw = 1000, burn.in = 100, thinning = 1, 
   prior=list(a1=1, a2=1, c=rep(0, ncol(X)), T=diag(ncol(X))*1e12), 
   start = list(rho = 0.75, beta = rep(0, ncol(X))),
@@ -25,6 +27,11 @@ sar_probit_mcmc(y, X, W, ndraw = 1000, burn.in = 100, thinning = 1,
   \item{start}{list of start values}
   \item{m}{Number of burn-in samples in innermost Gibbs sampler. Defaults to 10.}
   \item{showProgress}{Flag if progress bar should be shown. Defaults to FALSE.}
+  \item{formula}{an object of class "\code{\link{formula}}" (or one that can be coerced to that class): a symbolic description of the model to be fitted.}
+  \item{data}{an optional data frame, list or environment (or object coercible by \code{as.data.frame} to a data frame) containing the variables in the model. 
+              If not found in data, the variables are taken from environment(formula), typically the environment from which sarprobit is called.}
+  \item{subset}{an optional vector specifying a subset of observations to be used in the fitting process.}
+  \item{...}{additional arguments to be passed}
 }
 \details{
 Bayesian estimates of the spatial autoregressive probit model
