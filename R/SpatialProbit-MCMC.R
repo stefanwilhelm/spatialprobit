@@ -547,7 +547,7 @@ I_n <- sparseMatrix(i=1:n, j=1:n, x=1)
 print(object.size(I_n), units="Mb")
   
 # build spatial weight matrix W from coordinates in X
-W <- kNearestNeighbors(x=rnorm(n), y=rnorm(n), m=6)
+W <- kNearestNeighbors(x=rnorm(n), y=rnorm(n), k=6)
   
 # create samples from epsilon using independence of distributions (rnorm()) to avoid dense matrix I_n
 eps <- rnorm(n=n, mean=0, sd=1)
