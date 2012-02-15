@@ -1,5 +1,4 @@
 require(Matrix)
-require(pracma)
 
 # PURPOSE: Creates an nxn sparse identity matrix 
 #---------------------------------------------------
@@ -34,74 +33,3 @@ spconvert <- function(X){
   return(result)
 }
 
-# PURPOSE: performs matrix division even if matrices
-#          are not of the same dimension, but are row or
-#          column compatible
-#---------------------------------------------------
-# USAGE: result = matdiv(x,y)
-# where:    x,y = two matrices (not of the same dimension
-#                 but are row or column compatible)
-#---------------------------------------------------
-# RETURNS: result = x / y where x and y are row or column compatible
-# --------------------------------------------------
-# written by:
-# James P. LeSage, Dept of Economics
-# Unioutersity of Toledo
-# 2801 W. Bancroft St,
-# Toledo, OH 43606
-# jpl@jpl.econ.utoledo.edu
-matdiv <- function(x,y){
-  rx <- nrow(x); cx <- ncol(x)
-  ry <- nrow(y); cy <- ncol(y)
-  if( (cx == cy) && (rx == ry) ){
-    results <- x / y
-  }else if( (cx == cy) && (rx == 1) ){
-    results <- y / repmat(x,ry,1) 
-  }else if( (cx == cy) && (ry == 1) ){
-    results <- x / repmat(y,rx,1)
-  }else if( (rx == ry) && (cx == 1) ){
-    results <- y / repmat(x,1,cy)
-  }else if( (rx == ry) && (cy == 1) ){
-    results <- x / repmat(y,1,cx) 
-  }else{
-    print('matdiv: non-conformable in row or column dimension')
-    results <- NULL
-  }
-  return(results)
-}
-
-# PURPOSE: performs matrix multiplication even if matrices
-#          are not of the same dimension, but are row or
-#          column compatible
-#---------------------------------------------------
-# USAGE: result = matmul(x,y)
-# where:    x,y = two matrices (not of the same dimension
-#                 but are row or column compatible)
-#---------------------------------------------------
-# RETURNS: result = x * y where x and y are row or column compatible
-# --------------------------------------------------
-# written by:
-# James P. LeSage, Dept of Economics
-# Unioutersity of Toledo
-# 2801 W. Bancroft St,
-# Toledo, OH 43606
-# jpl@jpl.econ.utoledo.edu
-matmul <- function(x,y){
-  rx <- nrow(x); cx <- ncol(x)
-  ry <- nrow(y); cy <- ncol(y)
-  if( (cx == cy) && (rx == ry) ){
-    results <- x * y
-  }else if( (cx == cy) && (rx == 1) ){
-    results <- y * repmat(x,ry,1) 
-  }else if( (cx == cy) && (ry == 1) ){
-    results <- x * repmat(y,rx,1)
-  }else if( (rx == ry) && (cx == 1) ){
-    results <- y * repmat(x,1,cy)
-  }else if( (rx == ry) && (cy == 1) ){
-    results <- x * repmat(y,1,cx) 
-  }else{
-    print('matmul: non-conformable in row or column dimension')
-    results <- NULL
-  }
-  return(results)
-}

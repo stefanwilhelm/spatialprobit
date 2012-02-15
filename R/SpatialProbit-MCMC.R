@@ -10,33 +10,31 @@
 library(tmvtnorm)
 library(mvtnorm)
 library(Matrix)    # sparseMatrix
-#library(compile)  # compiled byte code
 
-# source the "sar_base.r" and all dependent files
-#setwd("I:/R/tmvtnorm/doc/Spatial Probit/Miguel/stefan")
-#source("sar_base.r")
-#setwd("I:/R/tmvtnorm/doc/Spatial Probit/")
-#source("MemoryAllocation.R")
-
-# build spatial weight matrix W based on the m nearest neighbors (default m=6)
+# spdep::knearneigh  - k nearest neighbours for spatial weights
+# build spatial weight matrix W based on the k nearest neighbors (kNN) (default: k=6)
 #
 # @param X point coordinates (x, y)
 # @param m number of neighbors
-buildSpatialWeightMatrix <- function(X, m=6) {
-  n <- nrow(X)
-  # spatial weight matrix W based on the 6 nearest neighbors
-  D <- matrix(NA, n, m)  # (n x m) index matrix to the 6 nearest neigbhors from point i
+# @return sparse matrix (n x n) with nearest neigbors
+kNearestNeighbors <- function(x, y, k=6) {
+  # number of observations
+  n <- length(x)
+  
+  # spatial weight matrix W based on the k= nearest neighbors
+  D <- matrix(NA, n, k)  # (n x k) index matrix to the 6 nearest neigbhors from point i
   for (i in 1:n) {
-    p <- X[i,]
+    px <- x[i]
+    py <- y[i]
     # euclidean dist from all points to p
-    d <- sqrt((X[,1] - p[1])^2 + (X[,2] - p[2])^2)
+    d <- sqrt((x - px)^2 + (y - py)^2)
+    
     # determine the m nearest neighbors (rank 1 is the point itself, ranks 2..(m+1) are the m nearest neighbors
     # TODO: if 2 points have the same distance, e.g. ranks=1, 2, 2.5, 2.5 are odd
-    D[i, ] <- which(rank(d) %in% 2:(m+1))
+    D[i, ] <- which(rank(d) %in% 2:(k+1))
   }
   # sparse matrix representation for spatial weight matrix W
-  W <- sparseMatrix(i = rep(1:n, m), j=as.vector(D), x=1/m)
-  #W <- sparseMatrix(i = 1:n, j=1:n, x=1) # identity matrix for testing
+  W <- sparseMatrix(i = rep(1:n, k), j=as.vector(D), x=1/k)
   return(W)
 }
 
@@ -154,7 +152,7 @@ sar_probit_mcmc <- function(y, X, W, ndraw=1000, burn.in=100, thinning=1,
   beta <- start$beta         # start value of parameters, prior value, we could also sample from beta ~ N(c, T)
   
   # conjugate prior beta ~ N(c, T)
-  # TODO: parametrize, default to diffuse prior, for beta, e.g. T <- diag(k) * 1e12
+  # parametrize, default to diffuse prior, for beta, e.g. T <- diag(k) * 1e12
   c <- rep(0, k)             # prior distribution of beta ~ N(c, T) : c = 0
   if (is.matrix(prior$T) && ncol(prior$T) == k && isSymmetric(prior$T) && det(prior$T) > 0) {
     T <- prior$T               # prior distribution of beta ~ N(c, T) : T = I_n --> diffuse prior
@@ -175,7 +173,8 @@ sar_probit_mcmc <- function(y, X, W, ndraw=1000, burn.in=100, thinning=1,
   ldetflag   <-  0   # default to 1999 Pace and Barry MC determinant approx
   tmp <- sar_lndet(ldetflag, W, rmin, rmax)
   detval <- tmp$detval
-  # SW: Some precalculated quantities for drawing rho
+  
+  # Some precalculated quantities for drawing rho
   # rho ~ Beta(a1, a2) prior
   a1         <-  1.0
   a2         <-  1.0
@@ -216,9 +215,9 @@ sar_probit_mcmc <- function(y, X, W, ndraw=1000, burn.in=100, thinning=1,
   direct       <- matrix(NA, ndraw,p)    # n x p
   indirect     <- matrix(NA, ndraw,p)    # n x p
   total        <- matrix(NA, ndraw,p)    # n x p
-  avg_total    <- rep(0,p)                       # p x 1
-  avg_direct   <- rep(0,p)                       # p x 1
-  avg_indirect <- rep(0,p)                       # p x 1
+  avg_total    <- rep(0,p)               # p x 1
+  avg_direct   <- rep(0,p)               # p x 1
+  avg_indirect <- rep(0,p)               # p x 1
   
   # just to set a start value for z
   z <- rep(0, n)
@@ -229,10 +228,6 @@ sar_probit_mcmc <- function(y, X, W, ndraw=1000, burn.in=100, thinning=1,
   # solving equation 
   # (I_n - rho * W) mu = X beta 
   # instead of inverting S = I_n - rho * W as in mu = ( In -  rho W)^{-1} X beta.
-  # do not try to use neither this slow version
-  # mu <- qr.solve(S, X %*% beta)
-  # nor this memory-consuming versions
-  # mu <- solve(S) %*% X %*% beta
   # QR-decomposition for sparse matrices
   QR <- qr(S)  # class "sparseQR"
   mu <- solve(QR, X %*% beta)
@@ -341,12 +336,13 @@ sar_probit_mcmc <- function(y, X, W, ndraw=1000, burn.in=100, thinning=1,
   results$nomit <- burn.in
   results$a1        <- a1
   results$a2        <- a2
-  results$tflag     <- 'plevel'
   results$rmax      <- rmax 
   results$rmin      <- rmin
+  results$tflag     <- 'plevel'
   results$lflag     <- ldetflag
+  results$cflag     <- cflag
   results$lndet     <- detval
-  results$names <- c(colnames(X), 'rho')
+  results$names     <- c(colnames(X), 'rho')
   results$B         <- B        # (beta, rho) draws
   results$bdraw     <- B[,1:k]  # beta draws
   results$pdraw     <- B[,k+1]  # rho draws
@@ -520,8 +516,7 @@ I_n <- sparseMatrix(i=1:n, j=1:n, x=1)
 print(object.size(I_n), units="Mb")
   
 # build spatial weight matrix W from coordinates in X
-W <- buildSpatialWeightMatrix(cbind(x=rnorm(n), y=rnorm(n)), m=6)
-#W <- sparseMatrix(i = 1:n, j=1:n, x=1) # identity matrix for testing  
+W <- kNearestNeighbors(x=rnorm(n), y=rnorm(n), m=6)
   
 # create samples from epsilon using independence of distributions (rnorm()) to avoid dense matrix I_n
 eps <- rnorm(n=n, mean=0, sd=1)
@@ -627,7 +622,7 @@ I_n <- sparseMatrix(i=1:n, j=1:n, x=1)
 print(object.size(I_n), units="Mb")
   
 # build spatial weight matrix W from coordinates in X
-W <- buildSpatialWeightMatrix(cbind(x=rnorm(n), y=rnorm(n)), m=6)
+W <- kNearestNeighbors(x=rnorm(n), y=rnorm(n), k=6)
 
 library(pracma)
 Rprof("trW.out")
