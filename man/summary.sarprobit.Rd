@@ -22,6 +22,6 @@ This functions does not return any values.
 Miguel Godinho de Matos <miguelgodinhomatos@cmu.edu>, Stefan Wilhelm <wilhelm@financial.com>
 }
 
-\examples{
-# TO BE DONE
+\seealso{
+\code{\link{sarprobit}} for SAR probit model fitting
 }

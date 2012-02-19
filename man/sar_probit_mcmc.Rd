@@ -1,7 +1,7 @@
 \name{sarprobit}
 \alias{sar_probit_mcmc}
 \alias{sarprobit}
-\title{Bayesian estimation of the spatial probit model}
+\title{Bayesian estimation of the SAR probit model}
 
 \description{
 Bayesian estimation of the spatial autoregressive probit model (SAR probit model).
@@ -35,7 +35,7 @@ sar_probit_mcmc(y, X, W, ndraw = 1000, burn.in = 100, thinning = 1,
   \item{...}{additional arguments to be passed}
 }
 \details{
-Bayesian estimates of the spatial autoregressive probit model
+Bayesian estimates of the spatial autoregressive probit model (SAR probit model)
 \deqn{
   y = \rho W y + X \beta + \epsilon, \epsilon \sim N(0, I_n)
 }{
@@ -98,11 +98,12 @@ LeSage, J. and Pace, R. K. (2009), \emph{Introduction to Spatial Econometrics}, 
 }
 
 \author{
-Stefan Wilhelm <wilhelm@financial.com>, Miguel Godinho de Matos <miguelgodinhomatos@cmu.edu>
-}
+adapted to and optimized for R by Stefan Wilhelm <wilhelm@financial.com> 
+and Miguel Godinho de Matos <miguelgodinhomatos@cmu.edu>
+based on code from James P. LeSage}
 
 \seealso{
-\code{\link{sar_lndet}}
+\code{\link{sar_lndet}} for computing log-determinants
 }
 
 \examples{
@@ -137,7 +138,8 @@ z <- solve(qr(S), X \%*\% beta + eps)
 y <- as.vector(z >= 0)  # 0 or 1, FALSE or TRUE
 
 # estimate SAR probit model
-fit1 <- sar_probit_mcmc(y, X, W, ndraw=500, burn.in=100, thinning=1, prior=NULL)
-summary(fit1)
+sarprobit.fit1 <- sar_probit_mcmc(y, X, W, ndraw=500, burn.in=100, 
+  thinning=1, prior=NULL)
+summary(sarprobit.fit1)
 }
 }

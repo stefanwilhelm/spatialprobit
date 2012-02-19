@@ -1,7 +1,7 @@
 \name{plot.sarprobit}
 \alias{plot.sarprobit}
 \title{
-Plot Diagnostics for an \code{sarprobit} Object
+Plot Diagnostics for a \code{sarprobit} Object
 }
 \description{
 Three plots (selectable by which) are currently available:
@@ -20,7 +20,7 @@ trueparam = NULL)
   \item{which}{if a subset of the plots is required, specify a subset of the numbers 1:3.}
   \item{ask}{logical; if TRUE, the user is asked before each plot, see \code{par(ask=.)}.}
   \item{...}{other parameters to be passed through to plotting functions.}
-  \item{trueparam}{...}
+  \item{trueparam}{a vector of "true" parameter values to be marked as vertical lines in posterior density plot}
 }
 
 \author{
