@@ -176,7 +176,7 @@ lndetfull <- function( W, rmin, rmax ){
     rho             <- rvec[i]
     z               <- In - rho*W
     results$rho[i]  <- rho
-    results$lndet[i]<- as.real(determinant(z, log=TRUE)$modulus) 
+    results$lndet[i]<- as.real(determinant(z, logarithm=TRUE)$modulus) 
   }  
   return(results)
 }
