@@ -1,8 +1,14 @@
-0.2 (2012-01-28)
+User visible changes in spatialprobit package
+
+changes in spatialprobit 0.9-1 (2012-02-19)
+# first CRAN version
+# added method sarprobit() with formula / model.frame support
+
+changes in spatialprobit 0.2 (2012-01-28)
 # Added c.sarprobit() method for parallelization
 # added showProgress=FALSE as default.
 # Added estimation of direct impacts (total impacts and indirect impacts still to do)
-# Removed dependency on "pracma"
+# Removed dependency on package "pracma"
 
-0.1 (2012-01-17)
+changes in spatialprobit 0.1 (2012-01-17)
 # Bayesian estimation of the SAR probit model

@@ -1,11 +1,11 @@
 Package: spatialprobit
-Version: 0.1
-Date: 2012-01-02
+Version: 0.9-1
+Date: 2012-01-19
 Title: Spatial Probit Models
-Author: Miguel Godinho de Matos <miguelgodinhomatos@cmu.edu>, Stefan Wilhelm <wilhelm@financial.com>
+Author: Stefan Wilhelm <wilhelm@financial.com> and Miguel Godinho de Matos <miguelgodinhomatos@cmu.edu>
 Maintainer: Stefan Wilhelm <wilhelm@financial.com>
 Imports: stats
 Depends: R (>= 1.9.0), Matrix, akima, mvtnorm, tmvtnorm
-Description: Estimating Spatial Probit Models with MCMC
+Description: Bayesian Estimation of Spatial Probit Models
 License: GPL version 2 or newer
 URL: http://www.r-project.org

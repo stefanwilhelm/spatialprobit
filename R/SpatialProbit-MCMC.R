@@ -1,9 +1,10 @@
 ################################################################################
 #
-# Estimate spatial probit models using MCMC sampling
+# Bayesian estimation of spatial autoregressive probit model (SAR probit)
+# using MCMC sampling
 #
 # Stefan Wilhelm <Stefan.Wilhelm@financial.com>
-# using code from Miguel Godinho de Matos <miguel.godinhomatos@gmail.com>
+# using code from Miguel Godinho de Matos <miguelgodinhomatos@cmu.edu>
 #
 ################################################################################
 
@@ -44,7 +45,6 @@ kNearestNeighbors <- function(x, y, k=6) {
 # "The expectation of the quadratic form u'Au equals tr(A).
 #  Since u_i^2 follows a chi^2 distribution with one degree of freedom."
 # Pre-calculate traces tr(W^i) i=1,...,100 for the x-impacts calculations
-# TODO: SW Optimize
 #
 # @param W spatial weight matrix (n x n)
 # @param o highest order of W^i = W^o
@@ -67,7 +67,7 @@ tracesWi <- function(W, o=100, iiter=50) {
   trW_i <- trW_i / iiter
 }
 
-# PURPOSE:
+# PURPOSE: draw rho from conditional distribution p(rho | beta, z, y)
 # ---------------------------------------------------
 #  USAGE: 
 #
@@ -103,17 +103,18 @@ draw_rho <- function (detval1, detval2, detval1sq, yy, epe0, eped, epe0d,
     return(results)
 }
 
+# Bayesian estimation of SAR probit model
+#
+# @param formula 
 sarprobit <- function(formula, W, data, subset, ...) {
   cl <- match.call()                     # cl ist object of class "call"
   mf <- match.call(expand.dots = FALSE)  # mf ist object of class "call"
-  m  <- match(c("formula", "data", "subset"), names(mf), 0L)        # m ist indexvector
+  m  <- match(c("formula", "data", "subset"), names(mf), 0L)        # m is index vector
   mf <- mf[c(1L, m)]
   mf$drop.unused.levels <- TRUE
   mf[[1L]] <- as.name("model.frame")
-  mf <- eval(mf, parent.frame())         # Ab hier ist mf ein data.frame
-  #if (method == "model.frame") 
-  #  return(mf)
-  mt <- attr(mf, "terms")                # mt ist object von class "terms" und "formula"
+  mf <- eval(mf, parent.frame())         # from here mf is a data.frame
+  mt <- attr(mf, "terms")                # mt is object of class "terms" and "formula"
   y <- model.response(mf, "numeric")
   if (!is.null(W) && !is.numeric(W) && !inherits(W, "sparseMatrix") && nrow(W) != NROW(y)) 
     stop(gettextf("'W' must be a numeric square matrix, dimension %d should equal %d (number of observations)",
@@ -123,14 +124,7 @@ sarprobit <- function(formula, W, data, subset, ...) {
   sar_probit_mcmc(y, X, W, ...)    
 }
 
-if (FALSE) {
-#debug(sarprobit)
-CMK <- data.frame(y=c(0, 0, 1), x=c(1, 2, 3), income=c(1000, 500, 4000))
-W <- sparseMatrix(i=1:3, j=c(3, 1, 2), x=c(1, 1, 1))
-sarprobit(y ~ income, W, data=CMK, ndraw=100)
-}
-
-# Estimate the spatial probit model 
+# Estimate the spatial autoregressive probit model (SAR probit)
 # z = rho * W + X \beta + epsilon
 # where y = 1 if z >= 0 and y = 0 if z < 0 observable
 #
@@ -387,9 +381,6 @@ sar_probit_mcmc <- function(y, X, W, ndraw=1000, burn.in=100, thinning=1,
   return(results)
 }
 
-# compile functions
-#sar_probit_mcmc_comp <- cmpfun(sar_probit_mcmc)
-
 summary.sarprobit <- function(object, var_names=NULL, file=NULL, digits = max(3, getOption("digits")-3), ...){
   # TODO: check for class "sarprobit"
   if (!inherits(object, "sarprobit")) 
@@ -475,11 +466,19 @@ coef.sarprobit <- function(object, ...) {
  return(object$coefficients)
 }
 
+# extract the coefficients
 coefficients.sarprobit <- function(object, ...) {
  UseMethod("coef", object)
 }
 
-# plot MCMC results for class "sarprobit" (draft version)
+# plot MCMC results for class "sarprobit" (draft version);
+# diagnostic plots for results (trace plots, ACF, posterior density function)
+# method is very similar to plot.lm()
+#
+# @param x
+# @param which
+# @param ask
+# @param trueparam a vector of "true" parameter values to be marked in posterior density plot
 plot.sarprobit <- function(x, which=c(1, 2, 3), 
   ask = prod(par("mfcol")) < length(which) && dev.interactive(), ..., trueparam=NULL) {
  if (!inherits(x, "sarprobit")) 
@@ -523,149 +522,5 @@ plot.sarprobit <- function(x, which=c(1, 2, 3),
 }
 
 # return fitted values
-fitted.sarprobit <- function(object, ...) {
-
-}
-
-if (FALSE) {
-
-################################################################################
-#
-# example from LeSage(2009), section 10.1.5
-#
-################################################################################
-
-# generate random samples from true model
-n <- 200             # number of items
-beta <- c(0, -1, 1)  # true model parameters k=3 beta=(beta1,beta2,beta3)
-rho <- 0.75
-# design matrix with two standard normal variates as "coordinates"
-X <- cbind(intercept=1, x=rnorm(n), y=rnorm(n))
-  
-# identity matrix I_n
-I_n <- sparseMatrix(i=1:n, j=1:n, x=1)
-print(object.size(I_n), units="Mb")
-  
-# build spatial weight matrix W from coordinates in X
-W <- kNearestNeighbors(x=rnorm(n), y=rnorm(n), k=6)
-  
-# create samples from epsilon using independence of distributions (rnorm()) to avoid dense matrix I_n
-eps <- rnorm(n=n, mean=0, sd=1)
-z <- solve(qr(I_n - rho * W), X %*% beta + eps)
-y <- as.vector(z >= 0)  # binary observables, 0 or 1, FALSE or TRUE
-
-# MCMC estimation of spatial probit
-Rprof("sar_probit_mcmc.out")
-results <- sar_probit_mcmc(y, X, W, ndraw=1000, burn.in=100, thinning=3)
-Rprof(NULL)
-summaryRprof("sar_probit_mcmc.out")
-
-# visualization of sparsity pattern in W and H = (I_n - rho * W)'(I_n - rho * W)
-print(image(W, main = "image(W)")) # print(.) needed for Sweave
-S <- (I_n - rho * W)
-print(image(S, main = "image(I_n - rho * W)")) # print(.) needed for Sweave
-H <- t(S) %*% S
-print(image(H, main = "image(H)")) # print(.) needed for Sweave
-Sigma <- solve(H)
-print(image(Sigma, main = "image(Sigma)")) # print(.) needed for Sweave
-
-
-# compiled MCMC function
-#Rprof("sar_probit_mcmc_comp.out")
-#results <- sar_probit_mcmc_comp(y, X, W, ndraw=1000, burn.in=100, thinning=3)
-#Rprof(NULL)
-#summaryRprof("sar_probit_mcmc_comp.out")
-
-
-  
-B   <- results$B
-# parameter estimates for beta and rho
-colMeans(B)
- 
-# standard errors for beta and rho           
-apply(B, 2, sd)
-
-cbind(estimates=colMeans(B), SE=apply(B, 2, sd))
-
-  
-# diagnostic plots for results (trace plots, ACF, posterior density function)
-getParamName <- function(i) {
-  if (i==4) {
-   name <- substitute(rho)
-  } else {
-   name <- substitute(beta[i],list(i=i))
-  }
-  return(name)
-}
-
-par(mfrow=c(2,2))
-plot.results(results, trueparam = c(beta, rho))
-
-################################################################################
-#
-# example data set from Miguel Godinho de Matos
-#
-################################################################################
-
-data <- read.table("I:/R/tmvtnorm/doc/Spatial Probit/Miguel/stefan/data/probit_demo.data")     
-Y    <- as.matrix(data[,1] )
-long <- as.matrix(data[,11])
-latt <- as.matrix(data[,12])
-X    <- as.matrix(data[,2:10])
-W    <- make_neighborsw( latt, long , 15 )   # 15 nearest neighbors
-# TO BE FIXED WHEN 2 POINTS HAVE THE SAME DISTANCE
-# W    <- buildSpatialWeightMatrix(cbind(latt, long), m=15)   # 15 nearest neighbors
-Rprof(filename="sar_probit_mcmc.out")
-# ndraw=300, nomit=100
-results <- sar_probit_mcmc(Y, X, W, ndraw=1000, burn.in=100, thinning=3, prior=NULL)
-Rprof(NULL)
-summaryRprof(filename="sar_probit_mcmc.out")
-
-B   <- results$B
-# parameter estimates for beta and rho
-colMeans(B)
- 
-# standard errors for beta and rho           
-apply(B, 2, sd)
-
-pdf("probit_demo.pdf")
-par(mfrow=c(2,2))
-plot(results)
-dev.off()
-}
-
-if (FALSE) {
-################################################################################
-#
-# Debug method for tr(W^i)
-#
-################################################################################
-
-# generate random samples from true model
-n <- 200             # number of items
-beta <- c(0, -1, 1)  # true model parameters k=3 beta=(beta1,beta2,beta3)
-rho <- 0.75
-# design matrix with two standard normal variates as "coordinates"
-X <- cbind(intercept=1, x=rnorm(n), y=rnorm(n))
-  
-# identity matrix I_n
-I_n <- sparseMatrix(i=1:n, j=1:n, x=1)
-print(object.size(I_n), units="Mb")
-  
-# build spatial weight matrix W from coordinates in X
-W <- kNearestNeighbors(x=rnorm(n), y=rnorm(n), k=6)
-
-library(pracma)
-Rprof("trW.out")
-traceW.i <- tracesWi(W, o=100)
-Rprof(NULL)
-summaryRprof("trW.out")
-
-
-################################################################################
-
-undebug(sar_probit_mcmc)
-debug(sar_probit_mcmc)
-results <- sar_probit_mcmc(y, X, W, ndraw=1000, burn.in=0, thinning=1)
-results <- sar_probit_mcmc(y, X, W, ndraw=1000, burn.in=0, thinning=1, showProgress=TRUE)
-}
+#fitted.sarprobit <- function(object, ...) {
+#}

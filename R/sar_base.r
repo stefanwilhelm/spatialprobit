@@ -331,6 +331,11 @@ sar_marginal <- function(detval,e0,ed,epe0,eped,epe0d,nobs,nvar,logdetx,a1,a2){
 # % 2801 W. Bancroft St,
 # % Toledo, OH 43606
 # % jlesage@spatial-econometrics.com
+# Ported to R by Miguel Godinho de Matos
+#
+# @param detval
+# @param result_list a list of estimated model objects
+# @return a vector of posterior model probabilities
 model_probs <- function(detval, result_list){
   stopifnot(is.list(result_list))
   nmodels   <- length(result_list)
@@ -342,7 +347,8 @@ model_probs <- function(detval, result_list){
   } 
   
   xx  <- exp(lmarginal- max(lmarginal))
-  yy  <- repmat(as.matrix(detval[,1]), nmodels)
+  #yy  <- repmat(as.matrix(detval[,1]), nmodels)
+  yy  <- matrix(detval[,1], length(detval[,1]), nmodels)
 
   isum<- colSums((yy[2:nrho,] + yy[1:(nrho-1),])*(xx[2:nrho,]-xx[1:(nrho-1),])/2)
   psum<- sum( isum )
