@@ -315,25 +315,20 @@ sar_probit_mcmc <- function(y, X, W, ndraw=1000, burn.in=100, thinning=1,
     # SW: beff is parameter vector without constant!
     # SW: Do we have to compute impacts in every MCMC round or just once at the end?
     # SW: See LeSage (2009), section 5.6.2., p.149/150 for spatial effects estimation in MCMC
-    #  direct: M_r(D) = n^{-1} tr(S_r(W))           # SW: efficient approaches available, see chapter 4, pp.114/115
-    #   total: M_r(T) = n^{-1} 1'_n S_r(W) 1_n      # SW: Problem: 1'_n S_r(W) 1_n ist dense!
+    #   direct: M_r(D) = n^{-1} tr(S_r(W))           # SW: efficient approaches available, see chapter 4, pp.114/115
+    #    total: M_r(T) = n^{-1} 1'_n S_r(W) 1_n      # SW: Problem: 1'_n S_r(W) 1_n ist dense!
     # indirect: M_r(I) = M_r(T) - M_r(D)
     # SW: See LeSage (2009), section 10.1.6, p.293 for Marginal effects in SAR probit
-    #hhI   <- qr.solve(I_n - rho * W)       # SW: ist das nicht eine dense matrix!?? Oder nur ein Vektor?
-    #s     <- hhI %*% I_n                   # SW: warum mit In multiplizieren? s = (In - rho * W)^{-1} !?
-    # TODO: s is a dense matrix!!!
-    pdfz      <- matrix(dnorm(as.double(mu)), ncol=1)  # standard normal pdf phi(mu)
-    #dd        <- sparseMatrix(i=1:n,j=1:n, x=as.double(pdfz))         # dd is a sparse diagonal matrix (n x n)
-    
+    pdfz     <- matrix(dnorm(as.double(mu)), ncol=1)  # standard normal pdf phi(mu)
     dir      <- as.real(t(pdfz) %*% trW.i %*% rhovec /n)
     # direct impact : dy_i / d X_ir
     avg_direct     <- dir * beff
       
-    for(r in 1:p ){
-      #tmp               <- apply( dd %*% s * beff[r], 2, sum )  # phi(mu) wird auf die Diagonalelemente draufmultipliziert...
-      #avg_total[r]      <- mean( tmp ) 
-      #total_obs[ ,r]    <- total_obs[,r] + tmp 
-    }
+    #for(r in 1:p ){
+    #  tmp               <- apply( dd %*% s * beff[r], 2, sum )  # phi(mu) wird auf die Diagonalelemente draufmultipliziert...
+    #  avg_total[r]      <- mean( tmp ) 
+    #  total_obs[ ,r]    <- total_obs[,r] + tmp 
+    #}
     avg_indirect       <- avg_total - avg_direct    # (r x 1)
     #total[ind, ]      <- avg_total    # an (ndraw-nomit x p) matrix
     direct[ind, ]     <- avg_direct   # an (ndraw-nomit x p) matrix
@@ -347,6 +342,15 @@ sar_probit_mcmc <- function(y, X, W, ndraw=1000, burn.in=100, thinning=1,
     
   if (showProgress)  close(pb) #close progress bar
   
+  # fitted values for estimates (based on z rather than binary y like in fitted(glm.fit))
+  # (on reponse scale y vs. linear predictor scale z...)
+  beta  <- colMeans(B)[1:k]
+  rho   <- colMeans(B)[k+1]
+  S     <- (I_n - rho * W)
+  fitted.values   <- solve(qr(S), X %*% beta)   # z = (I_n - rho * W)^{-1}(X * beta)
+  fitted.response <- as.numeric(fitted.values >= 0) 
+  # TODO: linear.predictors  vs. fitted.values
+  
   # result
   results       <- NULL
   results$time  <- Sys.time() - timet
@@ -357,6 +361,8 @@ sar_probit_mcmc <- function(y, X, W, ndraw=1000, burn.in=100, thinning=1,
   results$beta  <- colMeans(B)[1:k]
   results$rho   <- colMeans(B)[k+1]
   results$coefficients <- colMeans(B)
+  results$fitted.values <- fitted.values
+  #results$fitted.reponse <- fitted.reponse  # fitted values on reponse scale (binary y variable)
   results$ndraw <- ndraw
   results$nomit <- burn.in
   results$a1        <- a1
@@ -376,13 +382,73 @@ sar_probit_mcmc <- function(y, X, W, ndraw=1000, burn.in=100, thinning=1,
   results$indirect  <- indirect
 
   #results$predicted <- # prediction required. The default is on the scale of the linear predictors
-  results$fitted.values <- NULL
   class(results)    <- "sarprobit"
   return(results)
 }
 
+# compute effects estimates (average direct and indirect impacts) for 
+# one set of SAR probit parameters 
+# (here we use the point estimates from "sarprobit" object, but we can extend this method to compute impacts for each MCMC iteration)
+# Attention: Currently the computation of total and indirect impacts requires a dense (n x n) matrix which will
+# work only for small n. If n is large this method will be VERY memory-consuming!
+#
+#   direct: M_r(D) = n^{-1} tr(S_r(W))           # efficient approaches available, see LeSage (2009), chapter 4, pp.114/115
+#    total: M_r(T) = n^{-1} 1'_n S_r(W) 1_n      # Problem: 1'_n S_r(W) 1_n is dense n x n matrix!
+# indirect: M_r(I) = M_r(T) - M_r(D)             # Problem: Computation of dense n x n matrix M_r(T) for total effects required!
+#  
+# @param beta parameter vector
+# @param beff parameter vector with constant removed (no intercept parameter)
+# @param rho  spatial dependence parameter
+# @param W spatial weight matrix
+# @param o the maximum o for which to compute tr(W^i) for i = 1..o
+# @return
+average.impacts <- function(beta, beff=beta, rho, W, X, o=100) {
+
+  p <- length(beff) # number of (non-constant) parameters
+  n <- nrow(W) # number of observations
+  I_n <- sparseMatrix(i=1:n, j=1:n, x=1) # sparse identity matrix
+  
+  # solving equation 
+  # (I_n - rho * W) mu = X beta 
+  # instead of inverting S = I_n - rho * W as in mu = (In -  rho W)^{-1} X beta.
+  # QR-decomposition for sparse matrices
+  S <- I_n - rho * W
+  QR <- qr(S)  # class "sparseQR"
+  mu <- solve(QR, X %*% beta)      # n x 1
+  
+  # S^{-1} = (I_n - rho * W)^{-1}
+  SI <- solve(QR)
+    
+  # Monte Carlo estimation of tr(W^i) for i = 1..o, tr(W^i) is (n x o) matrix
+  trW.i <- tracesWi(W, o=o, iiter=50)
+  
+  # compute effects estimates (direct and indirect impacts) in each MCMC iteration
+  rhovec <- rho^(0:(o-1)) # vector (o x 1) with [1, rho^1, rho^2 ..., rho^(o-1)], see LeSage(2009), eqn (4.145), p.115
+    
+  # See LeSage (2009), section 5.6.2., p.149/150 for spatial effects estimation in MCMC
+  #   direct: M_r(D) = n^{-1} tr(S_r(W))           # efficient approaches available, see LeSage (2009), chapter 4, pp.114/115
+  #    total: M_r(T) = n^{-1} 1'_n S_r(W) 1_n      # Problem: 1'_n S_r(W) 1_n is dense n x n matrix!
+  # indirect: M_r(I) = M_r(T) - M_r(D)             # Problem: Computation of dense n x n matrix M_r(T) for total effects required!
+  # See LeSage (2009), section 10.1.6, p.293 for Marginal effects in SAR probit
+  pdfz <- matrix(dnorm(as.double(mu)), ncol=1)  # standard normal pdf phi(mu) = phi( (In -  rho W)^{-1} X beta )  # (n x 1)
+  dd   <- sparseMatrix(i=1:n, j=1:n, x=pdfz)    # dd is diagonal matrix with pdfz as diagonal (n x n)
+  
+  dir      <- as.real(t(pdfz) %*% trW.i %*% rhovec /n)  # (1 x n) * (n x o) * (o x 1)
+  # direct impact : dy_i / d X_ir = phi((In -  rho W)^{-1} X beta_r) * beta_r ???
+  avg_direct     <- dir * beff      # (p x 1)
+      
+  for(r in 1:p ){
+    tmp               <- apply( dd %*% SI * beff[r], 2, sum )  # phi(mu) wird auf die Diagonalelemente draufmultipliziert...
+    avg_total[r]      <- mean( tmp ) 
+  }
+  avg_indirect       <- avg_total - avg_direct    # (p x 1)
+   
+  return(list(avg_total=avg_total, avg_direct=avg_direct, avg_indirect=avg_indirect))
+}
+
+# summary method for class "sarprobit"
 summary.sarprobit <- function(object, var_names=NULL, file=NULL, digits = max(3, getOption("digits")-3), ...){
-  # TODO: check for class "sarprobit"
+  # check for class "sarprobit"
   if (!inherits(object, "sarprobit")) 
         stop("use only with \"sarprobit\" objects")
         
@@ -435,8 +501,9 @@ summary.sarprobit <- function(object, var_names=NULL, file=NULL, digits = max(3,
                   cutpoints = c(0, 0.001, 0.01, 0.05, 0.1, 1),
                   symbols = c("***", "**", "*", ".", " "))
     x <- paste("Signif. codes: ", attr(Signif, "legend"), "\n", sep="")
-    cat(paste(strwrap(x, width = getOption("width")), collapse = "\\\\\n"), "\n")
+    cat(paste(strwrap(x, width = getOption("width")), collapse = "\\\n"), "\n")
   }
+  return(coefficients)
 }
 
 # c.sarprobit works in the same way as boot:::c.boot().
@@ -500,7 +567,7 @@ plot.sarprobit <- function(x, which=c(1, 2, 3),
  if (show[1L]) {
   # trace plots
   for (i in 1:k) {
-    plot(1:nrow(B), B[,i], type="l", main=substitute("Trace plot of "*x, list(x=names[i])), ...)
+    plot(1:nrow(B), B[,i], type="l", xlab="iteration", ylab=names[i], main=substitute("Trace plot of "*x, list(x=names[i])), ...)
     if (!is.null(trueparam)) abline(h=trueparam[i], col="red", lty=2)
   }
  }
@@ -521,6 +588,60 @@ plot.sarprobit <- function(x, which=c(1, 2, 3),
  }
 }
 
-# return fitted values
-#fitted.sarprobit <- function(object, ...) {
-#}
+# return fitted values of SAR probit (on reponse scale vs. linear predictor scale)
+fitted.sarprobit <- function(object, ...) {
+  object$fitted.value
+}
+
+predict.glm <- function (object, newdata = NULL, 
+    type = c("link", "response", "terms"), 
+    se.fit = FALSE, dispersion = NULL, terms = NULL, 
+    na.action = na.pass, ...) 
+{
+    type <- match.arg(type)
+    na.act <- object$na.action
+    object$na.action <- NULL
+    if (!se.fit) {
+        if (missing(newdata)) {
+            pred <- switch(type, 
+              link = object$linear.predictors, 
+              response = object$fitted.values, 
+              terms = predict.lm(object, se.fit = se.fit, scale = 1, type = "terms", terms = terms)
+            )
+            if (!is.null(na.act)) 
+                pred <- napredict(na.act, pred)
+        }
+        else {
+            pred <- predict.lm(object, newdata, se.fit, scale = 1, 
+                type = ifelse(type == "link", "response", type), 
+                terms = terms, na.action = na.action)
+            switch(type, response = {
+                pred <- family(object)$linkinv(pred)
+            }, link = , terms = )
+        }
+    }
+    else {
+        if (inherits(object, "survreg")) 
+            dispersion <- 1
+        if (is.null(dispersion) || dispersion == 0) 
+            dispersion <- summary(object, dispersion = dispersion)$dispersion
+        residual.scale <- as.vector(sqrt(dispersion))
+        pred <- predict.lm(object, newdata, se.fit, scale = residual.scale, 
+            type = ifelse(type == "link", "response", type), 
+            terms = terms, na.action = na.action)
+        fit <- pred$fit
+        se.fit <- pred$se.fit
+        switch(type, response = {
+            se.fit <- se.fit * abs(family(object)$mu.eta(fit))
+            fit <- family(object)$linkinv(fit)
+        }, link = , terms = )
+        if (missing(newdata) && !is.null(na.act)) {
+            fit <- napredict(na.act, fit)
+            se.fit <- napredict(na.act, se.fit)
+        }
+        pred <- list(fit = fit, se.fit = se.fit, residual.scale = residual.scale)
+    }
+    pred
+}
+
+
