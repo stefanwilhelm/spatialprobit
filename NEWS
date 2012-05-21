@@ -1,5 +1,9 @@
 User visible changes in spatialprobit package
 
+changes in spatialprobit 0.9-2 (2012-05-21)
+# Export c.sarprobit() method for parallelization
+# Return value for method summary.sarprobit()
+
 changes in spatialprobit 0.9-1 (2012-02-19)
 # first CRAN version
 # added method sarprobit() with formula / model.frame support
