@@ -1,5 +1,9 @@
 User visible changes in spatialprobit package
 
+changes in spatialprobit 0.9-3 (2012-07-05)
+# data set CMK added (Coles, Mendelsohn, Katz)
+# added method marginal.effects()/marginal.effects.sarprobit() for computing average direct, indirect and total impacts.
+
 changes in spatialprobit 0.9-2 (2012-05-21)
 # Export c.sarprobit() method for parallelization
 # Return value for method summary.sarprobit()
