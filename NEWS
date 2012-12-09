@@ -1,7 +1,11 @@
 User visible changes in spatialprobit package
 
+changes in spatialprobit 0.9-4 (2012-07-05)
+# Added LeSagePaceExperiment() function for replication of LeSage and Pace (2009), section 10.1.5
+# Added documentation of CKM data set
+
 changes in spatialprobit 0.9-3 (2012-07-05)
-# data set CMK added (Coles, Mendelsohn, Katz)
+# data set CKM "Innovation among physicians" added (Coles, Katz, Mendelsohn)
 # added method marginal.effects()/marginal.effects.sarprobit() for computing average direct, indirect and total impacts.
 
 changes in spatialprobit 0.9-2 (2012-05-21)

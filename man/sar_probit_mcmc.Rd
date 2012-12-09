@@ -13,7 +13,7 @@ sarprobit(formula, W, data, subset, ...)
 sar_probit_mcmc(y, X, W, ndraw = 1000, burn.in = 100, thinning = 1, 
   prior=list(a1=1, a2=1, c=rep(0, ncol(X)), T=diag(ncol(X))*1e12), 
   start = list(rho = 0.75, beta = rep(0, ncol(X))),
-  m=10, showProgress=FALSE)
+  m=10, computeMarginalEffects=FALSE, showProgress=FALSE)
 }
 \arguments{
   \item{y}{dependent variables. vector of zeros and ones}
@@ -27,6 +27,7 @@ sar_probit_mcmc(y, X, W, ndraw = 1000, burn.in = 100, thinning = 1,
                and \eqn{\beta \sim N(c,T)}{beta ~ N(c,T)}. Defaults to diffuse prior for beta.}
   \item{start}{list of start values}
   \item{m}{Number of burn-in samples in innermost Gibbs sampler. Defaults to 10.}
+  \item{computeMarginalEffects}{Flag if marginal effects are calculated. Defaults to FALSE. We recommend to enable it only when sample size is small.}
   \item{showProgress}{Flag if progress bar should be shown. Defaults to FALSE.}
   \item{formula}{an object of class "\code{\link{formula}}" (or one that can be coerced to that class): a symbolic description of the model to be fitted.}
   \item{data}{an optional data frame, list or environment (or object coercible by \code{as.data.frame} to a data frame) containing the variables in the model. 
