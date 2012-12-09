@@ -12,6 +12,13 @@ library(tmvtnorm)
 library(mvtnorm)
 library(Matrix)    # sparseMatrix
 
+if (FALSE) {
+ source("sar_base.r")
+ source("matrix_operations.r")
+ source("stats_distributions.r")
+ source("utility_functions.r") 
+}
+
 # spdep::knearneigh  - k nearest neighbours for spatial weights
 # build spatial weight matrix W based on the k nearest neighbors (kNN) (default: k=6)
 #
@@ -470,16 +477,22 @@ marginal.effects.sarprobit <- function(object, o=100) {
   # S^{-1} = (I_n - rho * W)^{-1}
   SI <- solve(S)
   
+  # Marginal Effects for SAR Probit Model:
+  # LeSage (2009), equation (10.10), p.294:
+  # d E[y | x_r] / dx_r' = phi(S^{-1} I_n mean(x_r) beta_r) * S^{-1} I_n beta_r
+  # This gives a (n x n) matrix
+  # average direct effects = n^{-1} tr(S_r(W))
   
   # compute effects estimates (direct and indirect impacts) in each MCMC iteration
-  rhovec <- rho^(0:(o-1)) # vector (o x 1) with [1, rho^1, rho^2 ..., rho^(o-1)], see LeSage(2009), eqn (4.145), p.115
+  rhovec <- rho^(0:(o-1)) # vector (o x 1) with [1, rho^1, rho^2 ..., rho^(o-1)], 
+  # see LeSage(2009), eqn (4.145), p.115
     
   # See LeSage (2009), section 5.6.2., p.149/150 for spatial effects estimation in MCMC
   #   direct: M_r(D) = n^{-1} tr(S_r(W))           # efficient approaches available, see LeSage (2009), chapter 4, pp.114/115
   #    total: M_r(T) = n^{-1} 1'_n S_r(W) 1_n      # Problem: 1'_n S_r(W) 1_n is dense n x n matrix!
   # indirect: M_r(I) = M_r(T) - M_r(D)             # Problem: Computation of dense n x n matrix M_r(T) for total effects required!
   # See LeSage (2009), section 10.1.6, p.293 for Marginal effects in SAR probit
-  pdfz <- matrix(dnorm(as.double(mu)), ncol=1)  # standard normal pdf phi(mu) = phi( (In -  rho W)^{-1} X beta )  # (n x 1)
+  pdfz <- dnorm(as.matrix(mu))                     # dnorm preserves dimensions of mu; standard normal pdf phi(mu) = phi( (In -  rho W)^{-1} X beta )  # (n x 1)
   dd   <- sparseMatrix(i=1:nobs, j=1:nobs, x=as.double(pdfz))    # dd is diagonal matrix with pdfz as diagonal (n x n)
   
   dir      <- as.real(t(pdfz) %*% trW.i %*% rhovec /nobs)  # (1 x n) * (n x o) * (o x 1)
@@ -495,127 +508,118 @@ marginal.effects.sarprobit <- function(object, o=100) {
   D[i,] <- avg_direct
   I[i,] <- avg_indirect
   T[i,] <- avg_total
-  } 
-  
-  return(list(direct=D, indirect=I, total=T))
-}
-
-
-if (FALSE) {
-require(spatialprobit)
-
-# number of observations
-n <- 10
-
-# true parameters
-beta <- c(0, 1, -1)
-rho <- 0.75
-
-# design matrix with two standard normal variates as "covariates"
-X <- cbind(intercept=1, x=rnorm(n), y=rnorm(n))
-
-# sparse identity matrix
-I_n <- sparseMatrix(i=1:n, j=1:n, x=1)
-
-# number of nearest neighbors in spatial weight matrix W
-m <- 6
-
-# spatial weight matrix with m=6 nearest neighbors
-W <- sparseMatrix(i=rep(1:n, each=m), 
-  j=replicate(n, sample(x=1:n, size=m, replace=FALSE)), x=1/m, dims=c(n, n))
-
-# innovations
-eps <- rnorm(n=n, mean=0, sd=1)
-
-# generate data from model 
-S <- I_n - rho * W
-z <- solve(qr(S), X %*% beta + eps)
-y <- as.vector(z >= 0)  # 0 or 1, FALSE or TRUE
-
-# estimate SAR probit model
-set.seed(12345)
-sarprobit.fit1 <- sar_probit_mcmc(y, X, W, ndraw=1000, burn.in=50, 
-  thinning=1, prior=NULL, computeMarginalEffects=TRUE)
-summary(sarprobit.fit1)
-colMeans(sarprobit.fit1$direct)
-colMeans(sarprobit.fit1$indirect)
-
-set.seed(12345)
-#me <- marginal.effects.sarprobit(sarprobit.fit1)
-me <- marginal.effects(sarprobit.fit1)
-colMeans(me$direct)
-colMeans(me$indirect)
-
-plot(density(me$direct[,1]))
-lines(density(sarprobit.fit1$direct[,1]), col="red")
-plot(me$direct[,1],sarprobit.fit1$direct[,1]) 
-abline(a=0, b=1, lty=1, col="red")
-# problem: both should be the same, wrong: 
-# tr(W^i) is determined with simulation, so there will be different realisations in sarprobit.fit1
-# and marginal.effects.sarprobit()
-quantile(me$direct[,1], prob=c(0.025, 0.975)) # 95% confidence interval
-quantile(sarprobit.fit1$direct[,1], prob=c(0.025, 0.975))
-}
-
-# compute effects estimates (average direct and indirect impacts) for 
-# one set of SAR probit parameters 
-# (here we use the point estimates from "sarprobit" object, but we can extend 
-# this method to compute impacts for each MCMC iteration)
-# Attention: Currently the computation of total and indirect impacts requires a dense (n x n) matrix which will
-# work only for small n. If n is large this method will be VERY memory-consuming!
-#
-#   direct: M_r(D) = n^{-1} tr(S_r(W))           # efficient approaches available, see LeSage (2009), chapter 4, pp.114/115
-#    total: M_r(T) = n^{-1} 1'_n S_r(W) 1_n      # Problem: 1'_n S_r(W) 1_n is dense n x n matrix!
-# indirect: M_r(I) = M_r(T) - M_r(D)             # Problem: Computation of dense n x n matrix M_r(T) for total effects required!
-#  
-# @param beta parameter vector (p x 1)
-# @param beff parameter vector with constant removed (no intercept parameter)
-# @param rho  spatial dependence parameter
-# @param W spatial weight matrix (n x n)
-# @param o the maximum o for which to compute tr(W^i) for i = 1..o
-# @return a list of three impact measures (avg_total, avg_direct and avg_indirect)
-marginal.effects <- function(beta, beff=beta, rho, W, X, o=100) {
-
-  p <- length(beff) # number of (non-constant) parameters
-  n <- nrow(W) # number of observations
-  I_n <- sparseMatrix(i=1:n, j=1:n, x=1) # sparse identity matrix
-  
-  # solving equation 
-  # (I_n - rho * W) mu = X beta 
-  # instead of inverting S = I_n - rho * W as in mu = (In -  rho W)^{-1} X beta.
-  # QR-decomposition for sparse matrices
-  S <- I_n - rho * W
-  QR <- qr(S)  # class "sparseQR"
-  mu <- solve(QR, X %*% beta)      # n x 1
-  
-  # S^{-1} = (I_n - rho * W)^{-1}
-  SI <- solve(QR)
-    
-  # Monte Carlo estimation of tr(W^i) for i = 1..o, tr(W^i) is (n x o) matrix
-  trW.i <- tracesWi(W, o=o, iiter=50)
-  
-  # compute effects estimates (direct and indirect impacts) in each MCMC iteration
-  rhovec <- rho^(0:(o-1)) # vector (o x 1) with [1, rho^1, rho^2 ..., rho^(o-1)], see LeSage(2009), eqn (4.145), p.115
-    
-  # See LeSage (2009), section 5.6.2., p.149/150 for spatial effects estimation in MCMC
-  #   direct: M_r(D) = n^{-1} tr(S_r(W))           # efficient approaches available, see LeSage (2009), chapter 4, pp.114/115
-  #    total: M_r(T) = n^{-1} 1'_n S_r(W) 1_n      # Problem: 1'_n S_r(W) 1_n is dense n x n matrix!
-  # indirect: M_r(I) = M_r(T) - M_r(D)             # Problem: Computation of dense n x n matrix M_r(T) for total effects required!
-  # See LeSage (2009), section 10.1.6, p.293 for Marginal effects in SAR probit
-  pdfz <- matrix(dnorm(as.double(mu)), ncol=1)  # standard normal pdf phi(mu) = phi( (In -  rho W)^{-1} X beta )  # (n x 1)
-  dd   <- sparseMatrix(i=1:n, j=1:n, x=pdfz)    # dd is diagonal matrix with pdfz as diagonal (n x n)
-  
-  dir      <- as.real(t(pdfz) %*% trW.i %*% rhovec /n)  # (1 x n) * (n x o) * (o x 1)
-  # direct impact : dy_i / d X_ir = phi((In -  rho W)^{-1} X beta_r) * beta_r
-  avg_direct     <- dir * beff      # (p x 1)
-      
-  for(r in 1:p ){
-    tmp               <- apply( dd %*% SI * beff[r], 2, sum )  # multiplying phi(mu) to diagonal elements
-    avg_total[r]      <- mean( tmp ) 
   }
-  avg_indirect       <- avg_total - avg_direct    # (p x 1)
-   
-  return(list(avg_total=avg_total, avg_direct=avg_direct, avg_indirect=avg_indirect))
+  
+  summaryMarginalEffects <- function(x) {
+    r <- cbind(
+    apply(x, 2, mean),
+    apply(x, 2, sd),
+    apply(x, 2, mean)/apply(x, 2, sd))
+    colnames(r) <- c("marginal.effect", "standard.error","z.ratio")
+    return(r)
+  }
+  summary_direct <- summaryMarginalEffects(D)
+  summary_indirect <- summaryMarginalEffects(I)
+  summary_total <- summaryMarginalEffects(T)    
+  
+  return(list(direct=D, indirect=I, total=T,
+   summary_direct=summary_direct,
+   summary_indirect=summary_indirect,
+   summary_total=summary_total)
+  ) 
+}
+
+# Marginal Effects for SAR Probit Model:
+# LeSage (2009), equation (10.10), p.294:
+# d E[y | x_r] / dx_r' = phi(S^{-1} I_n mean(x_r) beta_r) * S^{-1} I_n beta_r
+marginal.effects.sarprobit2 <- function(object, o=100) {
+  # check for class "sarprobit"
+  if (!inherits(object, "sarprobit")) 
+        stop("use only with \"sarprobit\" objects")
+        
+  nobs      <- object$nobs
+  nvar      <- object$nvar   # number of explanatory variables
+  p         <- ifelse(object$cflag == 0, nvar, nvar - 1) # number of non-constant variables
+  ndraw     <- object$ndraw
+  nomit     <- object$nomit
+  betadraws <- object$bdraw
+  rhodraws  <- object$pdraw
+  X         <- object$X # data matrix
+  W         <- object$W # spatial weight matrix
+  I_n       <- sparseMatrix(i=1:nobs, j=1:nobs, x=1) # sparse identity matrix
+  
+  # Matrices (n x k) for average direct, indirect and total effects for all k (non-constant) explanatory variables
+  D <- matrix(NA, ndraw, p)
+  I <- matrix(NA, ndraw, p)
+  T <- matrix(NA, ndraw, p)
+  
+  # names of non-constant parameters
+  if(object$cflag == 0) {
+    namesNonConstantParams <- colnames(X)
+    avg_X                  <- colMeans(X) # avg(x_r)  
+  } else {
+    namesNonConstantParams <- colnames(X)[-1]
+    avg_X                  <- colMeans(X)[-1] # avg(x_r)
+    betadraws              <- betadraws[,-1]
+  }
+  colnames(T) <- namesNonConstantParams
+  colnames(D) <- namesNonConstantParams
+  colnames(I) <- namesNonConstantParams
+  
+  # loop all MCMC draws
+  for(i in 1:ndraw) {
+  
+  # get parameters for this MCMC iteration
+  beff <- betadraws[i,]   # only non-constant parameters!
+  rho  <- rhodraws[i]
+ 
+  # S^{-1} = (I_n - rho * W)^{-1}
+  S <- I_n - rho * W
+  SI <- solve(S)
+  
+  # Marginal Effects for SAR Probit Model:
+  # LeSage (2009), equation (10.10), p.294:
+  # d E[y | x_r] / dx_r' = phi(S^{-1} I_n mean(x_r) beta_r) * S^{-1} I_n beta_r
+  # This gives a (n x n) matrix
+  # average direct effects = n^{-1} tr(S_r(W))
+  
+  # NEUE IMPLEMENTATION (vielleicht ineffizient, orientiert sich aber an equation (10.10)):
+  avg_direct     <- rep(NA, p)      # (p x 1)    
+  avg_total      <- rep(NA, p)      # (p x 1)    
+  for(r in 1:p ){
+     diag1 <- diag(x=avg_X[r] * beff[r], nrow=nobs, ncol=nobs) # I_n * avg(x_r) * beta_r
+     phi1  <- dnorm(as.matrix(SI %*% diag1))                   # phi[ S^{-1} I_n avg(x_r) beta_r ]; (n x n) matrix
+     diag2 <- diag(x=beff[r], nrow=nobs, ncol=nobs)            # I_n * beta_r
+     
+     tmp   <- phi1 * (SI %*% diag2)  # phi[ S^{-1} I_n avg(x_r) beta_r ] * S^{-1} I_n * beta_r 
+     
+     avg_direct[r] <- mean(diag(tmp))    # average direct effect = average over diagonal elements
+     avg_total[r]  <- mean(colSums(tmp)) # average total effect = average over row (or column) sums
+  }
+  avg_indirect <- avg_total - avg_direct
+  
+  D[i,] <- avg_direct
+  I[i,] <- avg_indirect
+  T[i,] <- avg_total
+  }
+  
+  summaryMarginalEffects <- function(x) {
+    r <- cbind(
+    apply(x, 2, mean),
+    apply(x, 2, sd),
+    apply(x, 2, mean)/apply(x, 2, sd))
+    colnames(r) <- c("marginal.effect", "standard.error","z.ratio")
+    return(r)
+  }
+  summary_direct <- summaryMarginalEffects(D)
+  summary_indirect <- summaryMarginalEffects(I)
+  summary_total <- summaryMarginalEffects(T)    
+  
+  return(list(direct=D, indirect=I, total=T,
+   summary_direct=summary_direct,
+   summary_indirect=summary_indirect,
+   summary_total=summary_total)
+  )
 }
 
 # summary method for class "sarprobit"
