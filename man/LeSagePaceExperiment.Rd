@@ -6,7 +6,8 @@
  It first generates data from a SAR probit model and then estimates the model with our implementation. 
 }
 \usage{
-LeSagePaceExperiment(n = 200, beta = c(0, -1, 1), rho = 0.75, ndraw = 1000, burn.in = 100, thinning = 1, m = 10)
+LeSagePaceExperiment(n = 200, beta = c(0, -1, 1), rho = 0.75, ndraw = 1000, 
+ burn.in = 100, thinning = 1, m = 10, computeMarginalEffects=FALSE)
 }
 \arguments{
   \item{n}{sample size}
@@ -16,6 +17,7 @@ LeSagePaceExperiment(n = 200, beta = c(0, -1, 1), rho = 0.75, ndraw = 1000, burn
   \item{burn.in}{number of burn-in samples}
   \item{thinning}{thinning parameter}
   \item{m}{Gibbs sampler burn-in size for drawing from the truncated multinormal distribution}
+  \item{computeMarginalEffects}{Should marginal effects be computed?}
 }
 \value{
  Returns a structure of class \code{sarprobit}
@@ -30,13 +32,13 @@ Stefan Wilhelm <wilhelm@financial.com>
 
 \examples{
 \dontrun{
-# n=400, m=10
+# LeSage/Pace(2009), Table 10.1, p.291: n=400, m=10
 res1 <- LeSagePaceExperiment(n=400, beta=c(0,1,-1), rho=0.75, ndraw=1000, burn.in=200, thinning=1, m=10)
 res1$time
 res1$coefficients
 summary(res1)
 
-# n=1000, m=1
+# LeSage/Pace(2009), Table 10.1, p.291: n=1000, m=1
 res2 <- LeSagePaceExperiment(n=1000, beta=c(0,1,-1), rho=0.75, ndraw=1000, burn.in=200, thinning=1, m=1)
 res2$time
 res2$coefficients

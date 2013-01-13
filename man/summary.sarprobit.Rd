@@ -1,15 +1,19 @@
 \name{summary.sarprobit}
 \alias{summary.sarprobit}
-\title{Print the results of the SAR probit estimation via MCMC}
+\alias{summary.semprobit}
+\title{Print the results of the spatial probit estimation via MCMC}
 \description{
-Print the results of the SAR probit estimation via MCMC
+Print the results of the spatial probit estimation via MCMC
 }
 \usage{
 \method{summary}{sarprobit}(object, var_names = NULL, file = NULL, 
   digits = max(3, getOption("digits")-3), ...)
+
+\method{summary}{semprobit}(object, var_names = NULL, file = NULL, 
+  digits = max(3, getOption("digits")-3), ...)
 }
 \arguments{
-  \item{object}{class \code{sarprobit} with the results from \code{sar_probit_mcmc}}
+  \item{object}{class \code{sarprobit} or \code{semprobit} with model fits from \code{\link{sarprobit}} or \code{\link{semprobit}}}
   \item{var_names}{vector with names for the parameters under analysis}
   \item{file}{file name to be printed. If NULL or "" then print to console.}
   \item{digits}{integer, used for number formatting with signif() (for summary.default) or format() (for summary.data.frame).}
@@ -23,5 +27,5 @@ Miguel Godinho de Matos <miguelgodinhomatos@cmu.edu>, Stefan Wilhelm <wilhelm@fi
 }
 
 \seealso{
-\code{\link{sarprobit}} for SAR probit model fitting
+\code{\link{sarprobit}} or \code{\link{semprobit}} for SAR/SEM probit model fitting
 }

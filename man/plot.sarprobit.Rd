@@ -1,7 +1,8 @@
 \name{plot.sarprobit}
 \alias{plot.sarprobit}
+\alias{plot.semprobit}
 \title{
-Plot Diagnostics for a \code{sarprobit} Object
+Plot Diagnostics for \code{sarprobit} or \code{semprobit} objects
 }
 \description{
 Three plots (selectable by which) are currently available:
@@ -13,10 +14,16 @@ which = c(1, 2, 3),
 ask = prod(par("mfcol")) < length(which) && dev.interactive(),
 ...,
 trueparam = NULL)
+
+\method{plot}{semprobit}(x, 
+which = c(1, 2, 3), 
+ask = prod(par("mfcol")) < length(which) && dev.interactive(),
+...,
+trueparam = NULL)
 }
 
 \arguments{
-  \item{x}{a \code{sarprobit} Object}
+  \item{x}{a \code{sarprobit} or \code{semprobit} object}
   \item{which}{if a subset of the plots is required, specify a subset of the numbers 1:3.}
   \item{ask}{logical; if TRUE, the user is asked before each plot, see \code{par(ask=.)}.}
   \item{...}{other parameters to be passed through to plotting functions.}

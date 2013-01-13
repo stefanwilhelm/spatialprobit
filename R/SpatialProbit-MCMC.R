@@ -132,7 +132,7 @@ sarprobit <- function(formula, W, data, subset, ...) {
 }
 
 # Estimate the spatial autoregressive probit model (SAR probit)
-# z = rho * W + X \beta + epsilon
+# z = rho * W * z + X \beta + epsilon
 # where y = 1 if z >= 0 and y = 0 if z < 0 observable
 #
 # @param y
@@ -163,10 +163,10 @@ sar_probit_mcmc <- function(y, X, W, ndraw=1000, burn.in=100, thinning=1,
   
   #validate inputs
   if( length(c(which(y == 0 ),which(y == 1))) != length( y ) ){
-    stop('sarp_g: not all y-values are 0 or 1')
+    stop('sarprobit: not all y-values are 0 or 1')
   }
   if( n1 != n2 && n1 != n ){
-    stop('sarp_g: wrong size of spatial weight matrix W')
+    stop('sarprobit: wrong size of spatial weight matrix W')
   }
   # check if we have a constant term in X
   ind <- match( n, apply(X,2,sum))
@@ -348,7 +348,7 @@ sar_probit_mcmc <- function(y, X, W, ndraw=1000, burn.in=100, thinning=1,
       pdfz <- matrix(dnorm(as.double(mu)), ncol=1)             # standard normal pdf phi(mu)
       dd   <- sparseMatrix(i=1:n, j=1:n, x=as.double(pdfz))    # dd is diagonal matrix with pdfz as diagonal (n x n)
   
-      dir      <- as.real(t(pdfz) %*% trW.i %*% rhovec /n)  # (1 x n) * (n x o) * (o x 1)
+      dir      <- as.double(t(pdfz) %*% trW.i %*% rhovec /n)  # (1 x n) * (n x o) * (o x 1)
       # direct impact : dy_i / d X_ir = phi((In -  rho W)^{-1} X beta_r) * beta_r
       avg_direct     <- dir * beff      # (p x 1)
       avg_total      <- rep(NA, p)      # (p x 1)    
@@ -472,10 +472,15 @@ marginal.effects.sarprobit <- function(object, o=100) {
   # QR-decomposition for sparse matrices
   S <- I_n - rho * W
   QR <- qr(S)  # class "sparseQR"
-  mu <- solve(QR, X %*% beta)      # n x 1
+  mu <- solve(QR, X %*% beta)      # n x 1 --> Methode geht über StandardGeneric
   
-  # S^{-1} = (I_n - rho * W)^{-1}
+  # S^{-1} = (I_n - rho * W)^{-1}    # liefert eine dense (n x n) matrix
   SI <- solve(S)
+  
+  # http://math.stackexchange.com/questions/109329/can-qr-decomposition-be-used-for-matrix-inversion
+  # A = QR --> A^{-1} = R^{-1}Q^{-1} = R^{-1}Q'
+  # where R is triangular
+  #SI2 <- solve(qr.R(QR)) %*% t(qr.Q(QR))
   
   # Marginal Effects for SAR Probit Model:
   # LeSage (2009), equation (10.10), p.294:
@@ -492,15 +497,20 @@ marginal.effects.sarprobit <- function(object, o=100) {
   #    total: M_r(T) = n^{-1} 1'_n S_r(W) 1_n      # Problem: 1'_n S_r(W) 1_n is dense n x n matrix!
   # indirect: M_r(I) = M_r(T) - M_r(D)             # Problem: Computation of dense n x n matrix M_r(T) for total effects required!
   # See LeSage (2009), section 10.1.6, p.293 for Marginal effects in SAR probit
-  pdfz <- dnorm(as.matrix(mu))                     # dnorm preserves dimensions of mu; standard normal pdf phi(mu) = phi( (In -  rho W)^{-1} X beta )  # (n x 1)
-  dd   <- sparseMatrix(i=1:nobs, j=1:nobs, x=as.double(pdfz))    # dd is diagonal matrix with pdfz as diagonal (n x n)
+  pdfz <- dnorm(as.numeric(mu))                     # standard normal pdf phi(mu) = phi( (In -  rho W)^{-1} X beta )  # (n x 1)
+  dd   <- sparseMatrix(i=1:nobs, j=1:nobs, x=pdfz)  # dd is diagonal matrix with pdfz as diagonal (n x n)
   
-  dir      <- as.real(t(pdfz) %*% trW.i %*% rhovec /nobs)  # (1 x n) * (n x o) * (o x 1)
+  dir      <- as.double(t(pdfz) %*% trW.i %*% rhovec /nobs)  # (1 x n) * (n x o) * (o x 1) = (1 x 1)
   # direct impact : dy_i / d X_ir = phi((In -  rho W)^{-1} X beta_r) * beta_r
   avg_direct     <- dir * beff      # (p x 1)
   avg_total      <- rep(NA, p)      # (p x 1)    
+  ddSI <- dd %*% SI                 # (n x n)
+  colSumddSI <- colSums(ddSI)       # (n x 1)
   for(r in 1:p ){
-    tmp               <- apply( dd %*% SI * beff[r], 2, sum )  # multiplying phi(mu) to diagonal elements
+    #tmp               <- apply(ddSI  * beff[r], 2, sum )  # multiplying phi(mu) to diagonal elements
+    #tmp               <- colSums(ddSI  * beff[r])
+    tmp <- colSumddSI * beff[r]
+    # sollte das selbe sein wie: colSums(ddSI) * beff[r]
     avg_total[r]      <- mean( tmp ) 
   }
   avg_indirect       <- avg_total - avg_direct    # (p x 1)
@@ -668,7 +678,7 @@ summary.sarprobit <- function(object, var_names=NULL, file=NULL, digits = max(3,
   dimnames(coefficients) <- list(bout_names, 
         c("Estimate", "Std. Dev", "Bayes p-level", "t-value", "Pr(>|z|)"))
   printCoefmat(coefficients, digits = digits,
-    signif.stars = FALSE)
+    signif.stars = getOption("show.signif.stars"))      
   if (getOption("show.signif.stars")) {               
     # The solution: using cat() instead of print() and use line breaks
     # cat(paste(strwrap(x, width = 70), collapse = "\\\\\n"), "\n")
@@ -679,7 +689,7 @@ summary.sarprobit <- function(object, var_names=NULL, file=NULL, digits = max(3,
     x <- paste("Signif. codes: ", attr(Signif, "legend"), "\n", sep="")
     cat(paste(strwrap(x, width = getOption("width")), collapse = "\\\n"), "\n")
   }
-  return(coefficients)
+  return(invisible(coefficients))
 }
 
 # c.sarprobit works in the same way as boot:::c.boot().
@@ -768,6 +778,15 @@ plot.sarprobit <- function(x, which=c(1, 2, 3),
 fitted.sarprobit <- function(object, ...) {
   object$fitted.value
 }
+
+# Extract Log-Likelihood; see logLik.glm() for comparison
+# Method returns object of class "logLik" with at least one attribute "df"
+# giving the number of (estimated) parameters in the model.
+logLik.sarprobit <- function(object, ...) {
+
+}
+
+
 
 predict.glm <- function (object, newdata = NULL, 
     type = c("link", "response", "terms"), 

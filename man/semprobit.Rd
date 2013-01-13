@@ -1,19 +1,19 @@
-\name{sarprobit}
-\alias{sar_probit_mcmc}
-\alias{sarprobit}
-\title{Bayesian estimation of the SAR probit model}
+\name{semprobit}
+\alias{sem_probit_mcmc}
+\alias{semprobit}
+\title{Bayesian estimation of the SEM probit model}
 
 \description{
-Bayesian estimation of the spatial autoregressive probit model (SAR probit model).
+Bayesian estimation of the probit model with spatial errors (SEM probit model).
 }
 
 \usage{
-sarprobit(formula, W, data, subset, ...)
+semprobit(formula, W, data, subset, ...)
 
-sar_probit_mcmc(y, X, W, ndraw = 1000, burn.in = 100, thinning = 1, 
+sem_probit_mcmc(y, X, W, ndraw = 1000, burn.in = 100, thinning = 1, 
   prior=list(a1=1, a2=1, c=rep(0, ncol(X)), T=diag(ncol(X))*1e12), 
   start = list(rho = 0.75, beta = rep(0, ncol(X))),
-  m=10, computeMarginalEffects=FALSE, showProgress=FALSE)
+  m=10, showProgress=FALSE)
 }
 \arguments{
   \item{y}{dependent variables. vector of zeros and ones}
@@ -27,25 +27,27 @@ sar_probit_mcmc(y, X, W, ndraw = 1000, burn.in = 100, thinning = 1,
                and \eqn{\beta \sim N(c,T)}{beta ~ N(c,T)}. Defaults to diffuse prior for beta.}
   \item{start}{list of start values}
   \item{m}{Number of burn-in samples in innermost Gibbs sampler. Defaults to 10.}
-  \item{computeMarginalEffects}{Flag if marginal effects are calculated. Defaults to FALSE. We recommend to enable it only when sample size is small.}
   \item{showProgress}{Flag if progress bar should be shown. Defaults to FALSE.}
   \item{formula}{an object of class "\code{\link{formula}}" (or one that can be coerced to that class): a symbolic description of the model to be fitted.}
   \item{data}{an optional data frame, list or environment (or object coercible by \code{as.data.frame} to a data frame) containing the variables in the model. 
-              If not found in data, the variables are taken from environment(formula), typically the environment from which sarprobit is called.}
+              If not found in data, the variables are taken from environment(formula), typically the environment from which semprobit is called.}
   \item{subset}{an optional vector specifying a subset of observations to be used in the fitting process.}
   \item{...}{additional arguments to be passed}
 }
 \details{
-Bayesian estimates of the spatial autoregressive probit model (SAR probit model)
+Bayesian estimates of the probit model with spatial errors (SEM probit model)
 \deqn{
-  z = \rho W z + X \beta + \epsilon, \epsilon \sim N(0, I_n)
+  z = X \beta + u, \\
+  u = \rho*W*u + \epsilon, \epsilon \sim N(0, I_n)
 }{
-  z = rho*W*z + X*beta + e, e ~ N(0,I_n)
+  z = X*beta + u, \\
+  u = rho*W*u + e, e ~ N(0,I_n)
 }
+which leads to the data-generating process
 \deqn{
-  z = (I_n - \rho W) X \beta + (I_n - \rho W) \epsilon
+  z = X \beta + (I_n - \rho W) \epsilon
 }{
-  z = (I_n - rho W) X beta + (I_n - rho W) e
+  z = X beta + (I_n - rho W) e
 }    
 where y is a binary 0,1 \eqn{(n \times 1)}{(n x 1)} vector of observations for z < 0 and z >= 0. 
 \eqn{\beta}{beta} is a \eqn{(k \times 1)}{(k x 1)} 
@@ -60,8 +62,8 @@ The prior distributions are
  \eqn{\rho \sim Beta(a1,a2)}{or rho ~ Beta(a1,a2)}.
 }
 \value{
-Returns a structure of class \code{sarprobit}:
-%\item{meth }{ 'sarprobit' }
+Returns a structure of class \code{semprobit}:
+%\item{meth }{ 'semprobit' }
 \item{beta }{ posterior mean of bhat based on draws }
 \item{rho }{ posterior mean of rho based on draws }
 \item{bdraw }{ beta draws (ndraw-nomit x nvar) }
