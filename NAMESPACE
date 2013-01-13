@@ -6,6 +6,8 @@ export(sar_lndet)
 export(lndetfull)
 export(lndetChebyshev)
 export(kNearestNeighbors)
+
+# SAR probit
 export(sarprobit)
 export(sar_probit_mcmc)
 export(coefficients.sarprobit)
@@ -15,15 +17,25 @@ export(summary.sarprobit)
 export(c.sarprobit)
 export(marginal.effects)
 export(marginal.effects.sarprobit)
-export(LeSagePaceExperiment)
 #export(predict.sarprobit)
 #export(residuals.sarprobit)
 #export(fitted.sarprobit)
 #export(fitted.values.sarprobit)
 
+# SEM probit
+export(semprobit)
+export(sem_probit_mcmc)
+export(coefficients.semprobit)
+export(coef.semprobit)
+export(plot.semprobit)
+export(summary.semprobit)
+
+export(LeSagePaceExperiment)
+
 ## register all the methods for generics elsewhere in case namespace is
 ## loaded but not currently attached.
 S3method(plot, sarprobit)
+S3method(marginal.effects, sarprobit)
 #S3method(fitted, sarprobit)
 #S3method(predict, sarprobit)
 #S3method(residuals, sarprobit)

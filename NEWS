@@ -1,8 +1,10 @@
 User visible changes in spatialprobit package
 
-changes in spatialprobit 0.9-4 (2012-07-05)
+changes in spatialprobit 0.9-5 (2013-12-09)
+# Bayesian estimation of the SEM probit model
+# Use of deprecated {as.,is.,}real() functions replaced by {as.,is.,}double()
 # Added LeSagePaceExperiment() function for replication of LeSage and Pace (2009), section 10.1.5
-# Added documentation of CKM data set
+# Added documentation for CKM data set (Coles, Katz, Mendelsohn)
 
 changes in spatialprobit 0.9-3 (2012-07-05)
 # data set CKM "Innovation among physicians" added (Coles, Katz, Mendelsohn)
