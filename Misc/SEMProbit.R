@@ -1,4 +1,4 @@
-# Estimating a Probit Model with Spatial Errors (SEMProbit)
+# Estimating a Probit Model with Spatial Errors (SEM Probit)
 # autocorrelation in the error rather than on a lag variable
 #
 # Referenzen/Anwendungen von Spatial Probit
@@ -88,11 +88,14 @@ library(tmvtnorm)
 library(Matrix)    # sparseMatrix
 
 if (FALSE) {
- setwd("F:/R/spatialprobit/R")
+ setwd("G:/R/spatialprobit/R")
  source("sar_base.r")
  source("matrix_operations.r")
  source("stats_distributions.r")
- source("utility_functions.r") 
+ source("utility_functions.r")
+ setwd("G:/R/spatialprobit/Misc")
+ source("Metropolis-Hastings-rho.R")
+  
 }
 
 
@@ -224,7 +227,7 @@ sem_probit_mcmc <- function(y, X, W, ndraw=1000, burn.in=100, thinning=1,
   
   # 1. sample from z | rho, beta, y using precision matrix H
   # z ~ N(X beta, H)
-  mu <- rep(X %*% beta, n)
+  mu <- X %*% beta
   
   # see LeSage (2009) for choice of burn-in size, often m=5 or m=10 is used!
   # we can also use m=1 together with start.value=z, see LeSage (2009), section 10.1.5
@@ -259,7 +262,7 @@ sem_probit_mcmc <- function(y, X, W, ndraw=1000, burn.in=100, thinning=1,
   #eped <- as.double(crossprod(ed))
   #epe0d<- as.double(crossprod(ed, e0))
   #rho  <- draw_rho(detval1,detval2, detval1sq, yy, epe0, eped, epe0d, rho, nmk=nmk, nrho=2001, lnbprior, u=u[i + burn.in])
-  rho  <- draw_rho_metropolis(type="SEM", n=1, z, W, X, burn.in=100, start.value=rho, c=1)$rho_t[1]
+  rho  <- draw_rho_metropolis(type="SEM", n=1, z, W, X, burn.in=20, start.value=rho, c=1)$rho_t[20+1]
   
   ############################################################################## 
   
@@ -293,7 +296,7 @@ sem_probit_mcmc <- function(y, X, W, ndraw=1000, burn.in=100, thinning=1,
   beta  <- colMeans(B)[1:k]
   rho   <- colMeans(B)[k+1]
   S     <- (I_n - rho * W)
-  fitted.values   <- solve(qr(S), X %*% beta)   # z = (I_n - rho * W)^{-1}(X * beta)
+  fitted.values   <- X %*% beta                     # E[z | beta] = (X * beta)
   fitted.response <- as.numeric(fitted.values >= 0) 
   # TODO: linear.predictors  vs. fitted.values
   
@@ -323,9 +326,9 @@ sem_probit_mcmc <- function(y, X, W, ndraw=1000, burn.in=100, thinning=1,
   results$B         <- B        # (beta, rho) draws
   results$bdraw     <- B[,1:k]  # beta draws
   results$pdraw     <- B[,k+1]  # rho draws
-  results$total     <- total
-  results$direct    <- direct
-  results$indirect  <- indirect
+  #results$total     <- total
+  #results$direct    <- direct
+  #results$indirect  <- indirect
   results$W <- W
   results$X <- X
 
@@ -335,22 +338,159 @@ sem_probit_mcmc <- function(y, X, W, ndraw=1000, burn.in=100, thinning=1,
 }
 
 # example:
-n <- d <- 50
+library(tmvtnorm)
+library(Matrix)
+
+n <- d <- 300
 m <- 3
 W <- sparseMatrix(i=rep(1:d, each=m), 
   j=replicate(d, sample(x=1:d, size=m, replace=FALSE)), x=1/m, dims=c(d, d))
 I_n <- sparseMatrix(i=1:n, j=1:n, x=1)
 #I_n <- Diagonal(n)
-W <- as.matrix(W)
-I_n <- as.matrix(I_n)
-eps <- rnorm(n=n, mean=0, sd=0.1)
+#W <- as.matrix(W)
+#I_n <- as.matrix(I_n)
+eps <- rnorm(n=n, mean=0, sd=1)   # Normierung!!!
 rho <- 0.75
-X   <- cbind(1, runif(n=n, -2, 2))
-beta <- c(1, 1)
+X   <- cbind(x1=1, x2=runif(n=n, -2, 2))
+beta <- c(-0.2, 0.5)
 
 z <- as.vector(X %*% beta + solve(I_n - rho * W) %*% eps)     # SEM model
 y <- as.numeric(z >= 0)
 
-fit <- sem_probit_mcmc(y, X, W, ndraw=100, burn.in=100, thinning=1, showProgress=TRUE)
-
+
+mu <- X %*% beta
+
+# truncation points for z, depend only on y, can be precalculated
+lower <- ifelse(y > 0, 0,  -Inf)
+upper <- ifelse(y > 0, Inf,   0)
+
+S <- I_n - rho * W
+H <- t(S) %*% S            # precision matrix H for beta | rho, z, y
+
+znew <- as.double(rtmvnorm.sparseMatrix(n=1, mean=mu, H=H, lower=lower, upper=upper, burn.in=10))
+
+# stürzt in rtmvnorm.sparseMatrix ab, wenn I_n/W dense "matrix" sind.
+# dann ist auch H eine dense matrix. TODO: Fehler abfangen!
+Rprof("SEM-probit.out")
+fit <- sem_probit_mcmc(y, X, W, ndraw=500, burn.in=100, thinning=2, showProgress=TRUE)
+Rprof(NULL)
+summaryRprof("SEM-probit.out")
+summary(fit)
+plot(fit)
+
+# define summary method
+# summary method for class "semprobit"
+summary.semprobit <- function(object, var_names=NULL, file=NULL, digits = max(3, getOption("digits")-3), ...){
+  # check for class "sarprobit"
+  if (!inherits(object, "semprobit")) 
+        stop("use only with \"semprobit\" objects")
+        
+  nobs      <- object$nobs
+  nvar      <- object$nvar
+  ndraw     <- object$ndraw
+  nomit     <- object$nomit
+  draws     <- object$B
+  
+  #bayesian estimation
+  bout_mean <- object$coefficients                         #parameter mean column
+  bout_sd   <- apply(draws, 2, sd)                         #parameter sd colum
+  # build bayesian significance levels
+  # for parameter > 0 count all draws > 0  and determine P(X <= 0)
+  # for parameter <= 0 count all draws <0  and determine P(X >= 0)
+  bout_sig <- 1 - apply(draws, 2, function(x) { ifelse (mean(x) > 0, sum(x > 0), sum(x < 0)) }) / ndraw
+  #standard asymptotic measures
+  bout_t    <- bout_mean / bout_sd             #t score b/se
+  bout_tPval<- (1 - pt( abs(bout_t), nobs ))*2 #two tailed test = zero probability = z-prob
+  #name definition
+  if( is.null(var_names)){
+    bout_names<- as.matrix(object$names)
+  }else{
+    bout_names<- as.matrix(var_names)
+  }
+  
+  if(is.null(file)){file <- ""}#output to the console
+  #HEADER
+  write(sprintf("--------MCMC spatial autoregressive probit--------"), file, append=T)
+  #sprintf("Dependent Variable")
+  write(sprintf("Execution time  = %6.3f %s", object$time, attr(object$time, "units"))  , file, append=T)
+  write(sprintf("N steps for TMVN= %6d"  , object$nsteps), file, append=T)
+  write(sprintf("N draws         = %6d, N omit (burn-in)= %6d", ndraw, nomit), file, append=T)
+  write(sprintf("N observations  = %6d, K covariates    = %6d", nobs, nvar)  , file, append=T)
+  write(sprintf("# of 0 Y values = %6d, # of 1 Y values = %6d", object$zip, nobs - object$zip) , file, append=T)
+  write(sprintf("Min rho         = % 6.3f, Max rho         = % 6.3f", object$rmin, object$rmax), file, append=T)
+  write(sprintf("--------------------------------------------------"), file, append=T)
+  write(sprintf(""), file, append=T)
+  #ESTIMATION RESULTS
+  coefficients <- cbind(bout_mean, bout_sd, bout_sig, bout_t, bout_tPval)
+  dimnames(coefficients) <- list(bout_names, 
+        c("Estimate", "Std. Dev", "Bayes p-level", "t-value", "Pr(>|z|)"))
+  printCoefmat(coefficients, digits = digits,
+    signif.stars = getOption("show.signif.stars"))      
+  if (getOption("show.signif.stars")) {               
+    # The solution: using cat() instead of print() and use line breaks
+    # cat(paste(strwrap(x, width = 70), collapse = "\\\\\n"), "\n")
+    # http://r.789695.n4.nabble.com/Sweave-line-breaks-td2307755.html
+    Signif <- symnum(1e-6, corr = FALSE, na = FALSE,
+                  cutpoints = c(0, 0.001, 0.01, 0.05, 0.1, 1),
+                  symbols = c("***", "**", "*", ".", " "))
+    x <- paste("Signif. codes: ", attr(Signif, "legend"), "\n", sep="")
+    cat(paste(strwrap(x, width = getOption("width")), collapse = "\\\n"), "\n")
+  }
+  return(invisible(coefficients))
+} 
+
+# plot MCMC results for class "semprobit" (draft version);
+# diagnostic plots for results (trace plots, ACF, posterior density function)
+# method is very similar to plot.lm()
+#
+# @param x
+# @param which
+# @param ask
+# @param trueparam a vector of "true" parameter values to be marked in posterior density plot
+plot.semprobit <- function(x, which=c(1, 2, 3), 
+  ask = prod(par("mfcol")) < length(which) && dev.interactive(), ..., trueparam=NULL) {
+ if (!inherits(x, "semprobit")) 
+        stop("use only with \"semprobit\" objects")
+ if (!is.numeric(which) || any(which < 1) || any(which > 3)) 
+        stop("'which' must be in 1:3")
+        
+ names <- x$names
+ B <- x$B
+ k <- ncol(B)
+  
+ show <- rep(FALSE, 3)
+ show[which] <- TRUE
+ 
+ if (ask) {
+   oask <- devAskNewPage(TRUE)
+   on.exit(devAskNewPage(oask))
+ }
+ if (show[1L]) {
+  # trace plots
+  for (i in 1:k) {
+    plot(1:nrow(B), B[,i], type="l", xlab="iteration", ylab=names[i], main=substitute("Trace plot of "*x, list(x=names[i])), ...)
+    if (!is.null(trueparam)) abline(h=trueparam[i], col="red", lty=2)
+  }
+ }
+
+ if (show[2L]) {
+   # ACFs
+   for (i in 1:k) {
+     acf(B[,i], main=substitute("ACF of "*x, list(x=names[i])), ...)
+   }
+ }
+ 
+ if (show[3L]) {
+   # posterior distribution
+   for (i in 1:k) {
+     plot(density(B[,i]), main=substitute("Posterior distribution of "*x, list(x=names[i])), ...)
+     if (!is.null(trueparam)) abline(v=trueparam[i], col="red", lty=2)
+   }
+ }
+}
+
+summary(fit)
+plot(fit)
+
+
 
