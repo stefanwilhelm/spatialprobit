@@ -1,4 +1,5 @@
-LeSagePaceExperiment <- function(n=200, beta=c(0,-1,1), rho=0.75, ndraw=1000, burn.in=100, thinning=1, m=10) {
+LeSagePaceExperiment <- function(n=200, beta=c(0,-1,1), rho=0.75, ndraw=1000, burn.in=100, thinning=1, m=10,
+  computeMarginalEffects=FALSE) {
   # design matrix with two standard normal variates as explanatory variables
   X <- cbind(intercept=1, x=rnorm(n), y=rnorm(n))
   
@@ -14,7 +15,8 @@ LeSagePaceExperiment <- function(n=200, beta=c(0,-1,1), rho=0.75, ndraw=1000, bu
   y <- as.vector(z >= 0)  # binary observables, 0 or 1, FALSE or TRUE
 
   # MCMC estimation of spatial probit
-  results <- sar_probit_mcmc(y, X, W, ndraw=ndraw, burn.in=burn.in, thinning=thinning, m=m)
+  results <- sar_probit_mcmc(y, X, W, ndraw=ndraw, burn.in=burn.in, thinning=thinning, m=m,
+   computeMarginalEffects=computeMarginalEffects)
   results$sd <- apply(results$B, 2, sd)
   return(results)
 }
