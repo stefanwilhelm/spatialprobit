@@ -85,16 +85,34 @@ tracesWi <- function(W, o=100, iiter=50) {
 #where epe0 <- t(e0) %*% e0
 #      eped <- t(ed) %*% ed
 #      epe0d<- t(ed) %*% e0
-draw_rho <- function (detval1, detval2, detval1sq, yy, epe0, eped, epe0d, 
+#
+# detval1 = rvec = grid/vector of rhos
+# detval2 = vector of log-determinants
+# detval1sq = rvec^2
+# lnbprior = vector of log prior densities for rho (default: Beta(1,1))
+#
+# SW 15.01.2013:
+# - Beta(1,1) prior ist um rho=0 zentriert und zieht damit die die Posterior Density
+#   Richtung 0!
+# - Wie sieht es mit einer Uni(-1,1) Prior aus?
+# - Momentan ist nur ein Grid von rho-Werten berechnet 
+#   (z.B. nur auf 3 Nachkommastellen, wie z.B. rho=0.332)
+# - Kann also ein Rundungsproblem sein (Ziehen aus gerundeter Verteilung von rho)
+# - Siehe Computational Statistics
+draw_rho <- function (rhovec, lndet, rhovecsq, yy, epe0, eped, epe0d, 
     rho, nmk, nrho, lnbprior, u) 
 {
-    z <- epe0 - 2 * detval1 * epe0d + detval1sq * eped
+    z <- epe0 - 2 * rhovec * epe0d + rhovecsq * eped
     z <- -nmk * log(z)
-    den <- detval2 + z + lnbprior
+    den <- lndet + z + lnbprior          # vector of log posterior densities for rho vector
+    # posterior density post(rho | data) \propto likelihood(data|rho,beta,z) * prior(rho)
+    # log posterior density post(rho | data) \propto loglik(data|rho,beta,z) + log prior(rho)
     n <- nrho
     adj <- max(den)
-    den <- den - adj
-    x <- exp(den)
+    den <- den - adj                     # adjustieren/normieren der log density auf maximum 0; 
+    # SW: wahrscheinlich wegen numerischer Stabilität von exp(.)
+    x <- exp(den)                        # density von p(rho) --> pdf
+    # integrieren der Dichte-Funktion mit Trapezregel
     isum <- sum(yy * (x[2:n] - x[1:(n - 1)])/2)
     z <- abs(x/isum)
     den <- cumsum(z)
@@ -196,6 +214,7 @@ sar_probit_mcmc <- function(y, X, W, ndraw=1000, burn.in=100, thinning=1,
   Tinv <- solve(T)           # T^{-1}
   S <- I_n - rho * W
   H <- t(S) %*% S            # precision matrix H for beta | rho, z, y
+  QR <- qr(S)                # class "sparseQR"
   
   # truncation points for z, depend only on y, can be precalculated
   lower <- ifelse(y > 0, 0,  -Inf)
@@ -272,7 +291,6 @@ sar_probit_mcmc <- function(y, X, W, ndraw=1000, burn.in=100, thinning=1,
   # (I_n - rho * W) mu = X beta 
   # instead of inverting S = I_n - rho * W as in mu = ( In -  rho W)^{-1} X beta.
   # QR-decomposition for sparse matrices
-  QR <- qr(S)  # class "sparseQR"
   mu <- solve(QR, X %*% beta)
   
   # see LeSage (2009) for choice of burn-in size, often m=5 or m=10 is used!
@@ -309,9 +327,10 @@ sar_probit_mcmc <- function(y, X, W, ndraw=1000, burn.in=100, thinning=1,
   
   ############################################################################## 
   
-  # update S and H
+  # update S and H and QR decomposition
   S <- I_n - rho * W
   H <- t(S) %*% S      # H = S'S  / SW: crossprod(S) does not seem to work!
+  QR <- qr(S)          # class "sparseQR"
 
   if (i > 0) {
     if (thinning == 1) {
@@ -335,9 +354,6 @@ sar_probit_mcmc <- function(y, X, W, ndraw=1000, burn.in=100, thinning=1,
         beff <- beta          # no constant in model
       }
       
-      # S^{-1} = (I_n - rho * W)^{-1}
-      SI <- solve(S)
-  
       # beff is parameter vector without constant!
       # SW: Do we have to compute impacts in every MCMC round or just once at the end?
       # SW: See LeSage (2009), section 5.6.2., p.149/150 for spatial effects estimation in MCMC
@@ -345,16 +361,31 @@ sar_probit_mcmc <- function(y, X, W, ndraw=1000, burn.in=100, thinning=1,
       #    total: M_r(T) = n^{-1} 1'_n S_r(W) 1_n      # SW: Problem: 1'_n S_r(W) 1_n ist dense!
       # indirect: M_r(I) = M_r(T) - M_r(D)
       # SW: See LeSage (2009), section 10.1.6, p.293 for Marginal effects in SAR probit
-      pdfz <- matrix(dnorm(as.double(mu)), ncol=1)             # standard normal pdf phi(mu)
-      dd   <- sparseMatrix(i=1:n, j=1:n, x=as.double(pdfz))    # dd is diagonal matrix with pdfz as diagonal (n x n)
+      pdfz <- dnorm(as.numeric(mu))                     # standard normal pdf phi(mu)
+      dd   <- sparseMatrix(i=1:n, j=1:n, x=pdfz)       # dd is diagonal matrix with pdfz as diagonal (n x n)
   
       dir      <- as.double(t(pdfz) %*% trW.i %*% rhovec /n)  # (1 x n) * (n x o) * (o x 1)
       # direct impact : dy_i / d X_ir = phi((In -  rho W)^{-1} X beta_r) * beta_r
       avg_direct     <- dir * beff      # (p x 1)
-      avg_total      <- rep(NA, p)      # (p x 1)    
-      for(r in 1:p ){
-        tmp               <- apply( dd %*% SI * beff[r], 2, sum )  # multiplying phi(mu) to diagonal elements
-        avg_total[r]      <- mean( tmp ) 
+         
+      #same, but only with the QR decomposition of S which we already have!
+      # x is colsums (n x 1) of (D %*% S^(-1) * b[r]): 
+      # x = D %*% S^(-1) * b[r] %*% 1_n
+      # S %*% x = D %*% 1_n * b[r] 
+      # which can be solved via the QR decomposition of S
+      #cat("i=",i,class(QR),"rho=",rho,"\n")
+      #print(mu)
+      #print(beta)
+      #print(as.vector(dd %*% rep(1, n)))
+      b <- as.vector(dd %*% rep(1, n))        # Sx = b  --> x=S^(-1)b; b=pdfz???
+      # Sx = phi(mu) ??
+      # if b = 0 then solving Sx=b using QR decomposition does not work anymore
+      # so we catch this case here
+      if (isTRUE(all.equal(b, rep(0,n)))) {
+         avg_total <- rep(0,p)
+      } else {
+         # solve(QR, b) is (n x 1); mean(solve(QR, b)) is scalar; beff is (p x 1)
+         avg_total <- mean(solve(QR, b)) * beff       # (p x 1)  
       }
       avg_indirect       <- avg_total - avg_direct    # (p x 1)
       
@@ -422,7 +453,7 @@ marginal.effects <- function (object, ...)
 
 # compute marginal effects for every MCMC iteration of the 
 # estimated SAR probit model
-marginal.effects.sarprobit <- function(object, o=100) {
+marginal.effects.sarprobit <- function(object, o=100, ...) {
   # check for class "sarprobit"
   if (!inherits(object, "sarprobit")) 
         stop("use only with \"sarprobit\" objects")
@@ -474,14 +505,6 @@ marginal.effects.sarprobit <- function(object, o=100) {
   QR <- qr(S)  # class "sparseQR"
   mu <- solve(QR, X %*% beta)      # n x 1 --> Methode geht über StandardGeneric
   
-  # S^{-1} = (I_n - rho * W)^{-1}    # liefert eine dense (n x n) matrix
-  SI <- solve(S)
-  
-  # http://math.stackexchange.com/questions/109329/can-qr-decomposition-be-used-for-matrix-inversion
-  # A = QR --> A^{-1} = R^{-1}Q^{-1} = R^{-1}Q'
-  # where R is triangular
-  #SI2 <- solve(qr.R(QR)) %*% t(qr.Q(QR))
-  
   # Marginal Effects for SAR Probit Model:
   # LeSage (2009), equation (10.10), p.294:
   # d E[y | x_r] / dx_r' = phi(S^{-1} I_n mean(x_r) beta_r) * S^{-1} I_n beta_r
@@ -503,15 +526,25 @@ marginal.effects.sarprobit <- function(object, o=100) {
   dir      <- as.double(t(pdfz) %*% trW.i %*% rhovec /nobs)  # (1 x n) * (n x o) * (o x 1) = (1 x 1)
   # direct impact : dy_i / d X_ir = phi((In -  rho W)^{-1} X beta_r) * beta_r
   avg_direct     <- dir * beff      # (p x 1)
-  avg_total      <- rep(NA, p)      # (p x 1)    
-  ddSI <- dd %*% SI                 # (n x n)
-  colSumddSI <- colSums(ddSI)       # (n x 1)
-  for(r in 1:p ){
-    #tmp               <- apply(ddSI  * beff[r], 2, sum )  # multiplying phi(mu) to diagonal elements
-    #tmp               <- colSums(ddSI  * beff[r])
-    tmp <- colSumddSI * beff[r]
-    # sollte das selbe sein wie: colSums(ddSI) * beff[r]
-    avg_total[r]      <- mean( tmp ) 
+    
+  #same, but only with the QR decomposition of S which we already have!
+  # x is colsums (n x 1) of (D %*% S^(-1) * b[r]): 
+  # x = D %*% S^(-1) * b[r] %*% 1_n
+  # D^(-1) x = S^(-1) * b[r] %*% 1_n
+  # S %*% D^(-1) %*% x = b[r] %*% 1_n      # D ist leicht zu invertieren, weil Diagonalmatrix
+  #
+  # S %*% x = D %*% 1_n * b[r]  --> falsch?? Nein, weil D Diagonalmatrix ist, wirkt das wie eine Skalierung auf x!
+  # Und kann dann rübergezogen werden!
+  # which can be solved via the QR decomposition of S
+  b <- as.vector(dd %*% rep(1, nobs))        # Sx = b  --> x=S^(-1)b; b=pdfz???
+  # Sx = phi(mu) ??
+  # if b = 0 then solving Sx=b using QR decomposition does not work anymore
+  # so we catch this case here
+  if (isTRUE(all.equal(b, rep(0,nobs)))) {
+    avg_total <- rep(0,p)
+  } else {
+    # solve(QR, b) is (n x 1); mean(solve(QR, b)) is scalar; beff is (p x 1)
+    avg_total <- mean(solve(QR, b)) * beff       # (p x 1)  
   }
   avg_indirect       <- avg_total - avg_direct    # (p x 1)
   
