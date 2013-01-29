@@ -19,8 +19,8 @@ and to replicate the findings in the paper.
   \code{Katrina.raw} is a data frame with 673 observations on the following 15 variables.
   \describe{
     \item{\code{code}}{a numeric vector}
-    \item{\code{latt}}{latitude coordinate of store}
     \item{\code{long}}{longitude coordinate of store}
+    \item{\code{lat}}{latitude coordinate of store}
     \item{\code{street1}}{a numeric vector}
     \item{\code{medinc}}{median income}
     \item{\code{perinc}}{a numeric vector}
@@ -38,7 +38,7 @@ and to replicate the findings in the paper.
   \code{Katrina} is a data frame with 673 observations on the following 13 variables.
   \describe{
     \item{\code{long}}{longitude coordinate of store}
-    \item{\code{latt}}{latitude coordinate of store}
+    \item{\code{lat}}{latitude coordinate of store}
     \item{\code{flood_depth}}{flood depth (measured in feet)}
     \item{\code{log_medinc}}{log median income}
     \item{\code{small_size}}{binary variable for "small size" firms}
@@ -103,7 +103,7 @@ require(spdep)
  
 # (a) 0-3 months time horizon
 # LeSage et al. (2011) use k=11 nearest neighbors in this case
-nb <- knn2nb(knearneigh(cbind(Katrina$latt, Katrina$long), k=11))
+nb <- knn2nb(knearneigh(cbind(Katrina$lat, Katrina$long), k=11))
 listw <- nb2listw(nb, style="W")
 W1 <- as(as_dgRMatrix_listw(listw), "CsparseMatrix")
 

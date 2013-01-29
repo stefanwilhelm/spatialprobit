@@ -7,12 +7,13 @@ Estimate marginal effects (average direct, indirect and total impact)
 for the SAR probit model.
 }
 \usage{
-\method{marginal.effects}{sarprobit}(object, o = 100)
+\method{marginal.effects}{sarprobit}(object, o = 100, ...)
 }
 
 \arguments{
   \item{object}{Estimated SAR probit model of class \code{sarprobit}}
   \item{o}{maximum value for the power \eqn{tr(W^i), i=1,...,o} to be estimated}
+  \item{...}{additional parameters}
 }
 \details{
 In spatial models, a change in some explanatory variable \eqn{x_{ir}} for observation \eqn{i} 
