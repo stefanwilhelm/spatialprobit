@@ -77,7 +77,7 @@ sar_eigs <- function(eflag, W){
   # compute eigenvalues  
   if( eflag == 1 ){
     t0           <- Sys.time()
-    lambda       <- as.real( eigen( W, only.values=TRUE )$values )
+    lambda       <- as.double( eigen( W, only.values=TRUE )$values )
     results$rmin <- 1/min(lambda)
     results$rmax <- 1 
     results$time <- Sys.time() - t0 
@@ -176,7 +176,7 @@ lndetfull <- function( W, rmin, rmax ){
     rho             <- rvec[i]
     z               <- In - rho*W
     results$rho[i]  <- rho
-    results$lndet[i]<- as.real(determinant(z, logarithm=TRUE)$modulus) 
+    results$lndet[i]<- as.double(determinant(z, logarithm=TRUE)$modulus) 
   }  
   return(results)
 }
