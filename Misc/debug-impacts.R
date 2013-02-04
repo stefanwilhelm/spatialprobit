@@ -28,7 +28,6 @@ for (i in 3:o) {
 }
 
 trW.i2[1:5,1:5]
-# --> Index ist um 1 verschoben 1..o
 
 ################################################################################
 
@@ -61,7 +60,7 @@ avg_direct2     <- dir2 * beff      # (p x 1)
 avg_direct2
 # 0.08983675 -0.08983675
 
-
+# SO ISTS FALSCH!
 b <- as.vector(dd %*% rep(1, n))
 # solve(QR, b) is (n x 1); mean(solve(QR, b)) is scalar; beff is (p x 1)
 avg_total <- mean(solve(QR, b)) * beff       # (p x 1)
