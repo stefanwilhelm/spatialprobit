@@ -1,0 +1,76 @@
+\documentclass[a4paper]{article}
+\usepackage[margin=2cm]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage[english]{babel}
+
+\title{Computing the marginal effects of the SAR probit}
+\author{Stefan Wilhelm}
+
+\begin{document}
+
+\maketitle
+
+\section{The problem}
+In this note we show how to compute the marginal effects (especially the total impacts $M_r(T)$)
+for the SAR model and its probit variant \textit{without} inverting the Matrix $S=(I_n - \rho W)$.
+We only use the $QR$ decomposition of $S$.\\
+The problem with inverting $S$ is twofold. 
+First, while $S$ is often a sparse matrix, $S^{-1}$ is not. $S^{-1}=(I_n - \rho W)^{-1}$ will be a dense
+$n \times n$ matrix. For a large $n$ this may be problematic both in terms of memory consumption and speed.
+Second, matrix inversion is expensive $O(n^3)$ and we already have a $QR$ decomposition of $S$ available.
+When computing a summary measure like $S^{-1} 1_n=x$, we can well solve the system $S x = 1_n$ using the QR-decomposition
+of $S$.  
+
+\section{Marginal effects in the SAR model}
+
+Changes of the level of a single variable $x_{ir}$ will impact both the outcome of the same observation $y_i$ and possibly all other
+observations $y_j$ ($j \ne i$). So the matrix of possible changes to the $r$-th variables will be
+\begin{eqnarray}
+E(\partial y / \partial x'_r) & = & (I_n - \rho W)^{-1} I_n \beta_r \\
+                              & = & S_r(W) \nonumber
+\end{eqnarray}
+which is a $n \times n$ matrix.
+
+See \cite{LeSage2009}, section 5.6.2., p.149/150 for spatial effects estimation in MCMC. They propose three scalar summary
+measures of the spatial spillovers:
+\begin{itemize}
+\item average direct impacts: $M_r(D) = n^{-1} tr(S_r(W))$      \\
+Efficient approaches for computing the trace of $S_r(W)$ are available, see \cite{LeSage2009} chapter 4, pp.114/115.
+\item average total impacts: $M_r(T) = n^{-1} 1'_n S_r(W) 1_n$  \\
+ The problem with the total effects is that the matrix $1'_n S_r(W) 1_n$ is a dense matrix! 
+ For large problems this will run into storage problems.
+\item average indirect impacts: $M_r(I) = M_r(T) - M_r(D)$\\
+ The indirect impacts are directly linked to the total effects, so they may also suffer from the same problems.
+ Put it differently, once total effects can be efficiently computed, so can indirect effects.
+\end{itemize}
+
+\section{Marginal effects in SAR probit}
+
+See \cite{LeSage2009}, section 10.1.6, p.\,293 for marginal effects in SAR probit.
+For the change in $\beta_r$ we have the $n \times n$ effects matrix
+\begin{eqnarray}
+ \partial E[y | x_r] / \partial x'_r & = & \phi(S^{-1} I_n \bar{x}_r \beta_r) \odot S^{-1} I_n \beta_r \\
+                                     & = & \phi(\mu) \odot S^{-1} I_n \beta_r \nonumber \\
+                                     & = & S_r(W) \nonumber  
+\end{eqnarray}
+We are already solving the equation 
+\begin{equation}
+  (I_n - \rho W) \mu = X \beta \nonumber
+\end{equation}   
+for $\mu$ using the QR-decomposition of $S = (I_n - \rho W)$
+(as opposed to inverting $S$ as in $\mu = S^{-1} X \beta = (I_n -  \rho W)^{-1} X \beta$),
+so we have the QR decomposition of $S$ ready for the calculation of the total effects estimates.
+
+\begin{eqnarray}
+\text{average total effects} & = & n^{-1} 1_n' (D S^{-1} \cdot \beta_r) 1_n \\
+                             & = & n^{-1} 1_n' (D x) \cdot \beta_r \nonumber \\
+                             & = & \text{mean}(D x) \cdot \beta_r \nonumber
+\end{eqnarray}
+where $D$ is the diagonal matrix containing $\phi(\mu)$ and $x$ is the solution of $S x = 1_n$, obtained from the QR-decompositon
+of S. The average total effects is then the mean of $(D x) * \beta_r$, which can be furthermore done for all $\beta_r$ in one operation.
+
+\bibliographystyle{abbrvnat}
+\bibliography{spatialprobit}
+
+\end{document}
+
