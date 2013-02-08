@@ -1,6 +1,6 @@
 LeSagePaceExperiment <- function(n=400, beta=c(0,  1, -1), rho=0.75, ndraw=1000, 
   burn.in=200, thinning=1, m=10,
-  computeMarginalEffects=FALSE, ...) {
+  computeMarginalEffects=TRUE, ...) {
   
   if (length(beta) != 3) stop("Currently only implemented for 3 beta parameters")
   
