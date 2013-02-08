@@ -1,88 +1,56 @@
 # Estimating a Probit Model with Spatial Errors (SEM Probit)
 # autocorrelation in the error rather than on a lag variable
 #
-# Referenzen/Anwendungen von Spatial Probit
+# References/Applications von Spatial Probit
 #
-# (1) LeSage (2011)
-# (2) Coughlin (2003) Spatial Probit and Geographic Patters (Federal Reserve Bank): http://ideas.repec.org/p/fip/fedlwp/2003-042.html
+# (1) Marsh (2000): 
+#     "Probit with Spatial Correlation by Field Plot: Potato Leafroll Virus
+#	    Net Necrosis in Potatoes"
+# (2) Coughlin (2003): 
+#     "Spatial probit and the geographic patterns of state lotteries"
 # (3) Spatial Probit estimation of Freetrade agreements: http://ideas.repec.org/p/gii/giihei/heidwp07-2010.html
 # (4) Probit with spatial correlation: http://www.jstor.org/stable/1400629
-# http://www.sciencedirect.com/science?_ob=ArticleListURL&_method=list&_ArticleListID=1879027857&_st=13&view=c&_acct=C000026389&_version=1&_urlVersion=0&_userid=525223&md5=0b019d20f88711fe7bd9e24eb4211d66&searchtype=a
-
-#@UNPUBLISHED{Coughlin2003,
-#  author = {Cletus C. Coughlin and Thomas A. Garrett and Rubén Hernández-Murillo},
-#  title = {Spatial probit and the geographic patterns of state lotteries},
-#  note = {Federal Reserve Bank of St. Louis Working Paper 2003-042},
-#  year = {2003},
-#  owner = {stefan},
-#  timestamp = {2013.01.06}
-#}
+# (6) Jaimovich (2012)
 #
-#@ARTICLE{Jaimovich2012,
-#  author = {Dany Jaimovich},
-#  title = {A Bayesian spatial probit estimation of Free Trade Agreement contagion},
-#  journal = {Applied Economics Letters},
-#  year = {2012},
-#  volume = {19},
-#  pages = {579-583},
-#  number = {6},
-#  owner = {stefan},
-#  timestamp = {2013.01.06}
-#}
+# SAR Probit:
+# (5) LeSage (2011)
 
-# Spatial Errors
-
-# http://www.jstor.org/stable/1400629
-#@ARTICLE{Marsh2000,
-#  author = {Thomas L. Marsh and Ron C. Mittelhammer and Ray G. Huffaker},
-#  title = {Probit with Spatial Correlation by Field Plot: Potato Leafroll Virus
-#	Net Necrosis in Potatoes},
-#  journal = {Journal of Agricultural, Biological, and Environmental Statistics},
-#  year = {2000},
-#  volume = {5},
-#  pages = {22-36},
-#  owner = {stefan},
-#  timestamp = {2013.01.06}
-#}
-
-#Miguel Godinho de Matos
-# A simple extension to this model would be to consider autocorrelation 
-# in the error rather than on a lag variable.
-# z = xB + u
-# u = pWu + e
+# Comparison of SAR Probit vs. SEM Probit:
 #
-# This formulation allows for a utility based interpretation. 
-# Also it requires the truncated multivariate normal for estimation …. as well:
-#  z = xB + (I - pW)^(-1)e 
-# We should probably add this to the model since it also very often used.
+# (a) SAR Probit
+# - model: 
+#   z = pWz + xB + e, e ~ N(0, sige*I)
+#   Sz = xB + e  where S = (I - pW)
+# - DGP:
+#   z = (I - pW)^(-1)xB + (I - pW)^(-1)e
+# - observed:
+#   y = 1, if (z >= 0)
+#   y = 0, if (z < 0)
+# - model parameters: p, B (sige=1 for identification)
+# - conditional distributions:
+#   (aa) p(z | B,p,y)  ~  TN((I - pW)^(-1) xB, [(I - pW)'(I - pW)]^(-1))
+#   (bb) p(p | z, B)   ~  |I - pW| exp(-1/2*(Sz - xB)'(Sz - xB))
+#        Sz - xB = e (e ~ N(i.i.d))
+#   (cc) p(B | z,p,y)    ~ N(c*,T*)
 #
-# Im SAR Probit ist der DGP:
-# z = rho * W * z + X beta + e
-# Sz = X beta + e  where S = (I_n - rho W)
-# z = (I - pW)^(-1)xB + (I - pW)^(-1)e
-# und
-# z ~ N((I - pW)^(-1) xB, [(I - pW)'(I - pW)]^(-1))
 #
-# D.h. für das SEM Probit Model
-# z = xB + (I - pW)^(-1)e sollte doch das Ganze
-# so aussehen:
-# z ~ N(xB, [(I - pW)'(I - pW)]^(-1))
-#
-# Ausserdem ändert sich die Verteilung für beta p(beta | rho,z)
-# und für rho p(rho | beta, z)
-
-# SEM Probit: 
-# 1. Erwartungswert von Truncated Multivariate Normal p(z | beta, rho) ändert sich
-#    z ~ TN(X beta, H)
-# 2. Erwartungswert von von Normalverteilung p(beta | z, rho) ändert sich
-# 3. Verteilung von Rho:   p(rho | z, beta) ???
-#     SAR Probit:  p(rho | z, beta) ~  |I_n - rho W| exp(-1/2*(S z - X beta)'(S z - X beta))
-#                  Sz - Xbeta = e (e ~ N(i.i.d))
-#     SEM Probit:  p(rho | z, beta) ~  |I_n - rho W| exp(-1/2*(S z - S X beta)'(S z - S X beta)) ???
-#                  z = Xbeta + S^(-1)e
-#                  Sz - S X beta = e
-# TO BE VERIFIED
-# 4. Marginal Effects ändern sich gegenüber SAR Probit: SEM Probit hat kein Spatial Spillover, Marginal Effects wie beim Probit
+# (b) SEM Probit:
+# - autocorrelation in the error rather than on a lag variable:
+# - Modell:
+#   z = xB + u
+#   u = pWu + e, e ~ N(0, sige*I)
+# - observed:
+#   y = 1, if (z >= 0)
+#   y = 0, if (z < 0)
+# - DGP: z = xB + (I - pW)^(-1)e 
+# - model parameters: p, B, sige>0
+# - conditional distributions:
+#   (aa) p(z | B,p,y,sige) ~ TN(xB, sige*[(I - pW)'(I - pW)]^(-1))
+#   (bb) p(p | z, B, sige) ~ |I - pW| exp(-1/(2*sige)*(Sz - SxB)'(Sz - SxB))
+#                  z = xB + S^(-1)e
+#                  Sz - SxB = e
+#   (cc) Erwartungswert von von Normalverteilung p(beta | z, rho) ändert sich
+# - No spatial spillover, marginal effects in SEM Probit
 
 if (FALSE) {
  library(tmvtnorm)
@@ -124,7 +92,7 @@ semprobit <- function(formula, W, data, subset, ...) {
 # z = xB + u
 # u = pWu + e
 #
-# Also it requires the truncated multivariate normal for estimation …. as well:
+# Also it requires the truncated multivariate normal for estimation as well:
 #  z = xB + (I - pW)^(-1)e 
 # where y = 1 if z >= 0 and y = 0 if z < 0 observable
 #
@@ -135,12 +103,16 @@ semprobit <- function(formula, W, data, subset, ...) {
 # @param burn.in  number of MCMC burn-in to be discarded
 # @param thinning MCMC thinning factor, defaults to 1
 # @param m number of burn.in sampling in inner Gibbs sampling
-# @param prior
-# @param start
+# @param prior list of prior settings (a1, a2, c, T, nu, d0) for rho ~ Beta(a1,a2), beta ~ N(c, T),
+#    1/sige ~ Gamma(nu,d0) prior on sigma, default: nu=0,d0=0 (diffuse prior)
+#
+# @param start  start value for the chain; list of three components rho and beta and sigma.
 # @param m
 # @param showProgress
 sem_probit_mcmc <- function(y, X, W, ndraw=1000, burn.in=100, thinning=1, 
-  prior=list(a1=1, a2=1, c=rep(0, ncol(X)), T=diag(ncol(X))*1e12), start=list(rho=0.75, beta=rep(0, ncol(X))),
+  prior=list(a1=1, a2=1, c=rep(0, ncol(X)), T=diag(ncol(X))*1e12,
+  nu=0, d0=0, lflag = 0), 
+  start=list(rho=0.75, beta=rep(0, ncol(X)), sige=1),
   m=10, showProgress=FALSE){  
 
   #start timer
@@ -150,15 +122,15 @@ sem_probit_mcmc <- function(y, X, W, ndraw=1000, burn.in=100, thinning=1,
   n1 <- nrow( X )          
   n2 <- nrow( W )
   k <- ncol( X )             # number of of parameters/exogenous variables
-  I_n <- sparseMatrix(i=1:n, j=1:n, x=1)  # sparse identity matrix
-  
+  I_n <- sparseMatrix(i=1:n, j=1:n, x=1) # sparse identity matrix
+  if (is.null(colnames(X))) colnames(X) <- paste("x",1:k,sep="")
   
   #validate inputs
   if( length(c(which(y == 0 ),which(y == 1))) != length( y ) ){
-    stop('semprobit: not all y-values are 0 or 1')
+    stop("semprobit: not all y-values are 0 or 1")
   }
   if( n1 != n2 && n1 != n ){
-    stop('semprobit: wrong size of spatial weight matrix W')
+    stop("semprobit: wrong size of spatial weight matrix W")
   }
   # check if we have a constant term in X
   ind <- match( n, apply(X,2,sum))
@@ -169,12 +141,13 @@ sem_probit_mcmc <- function(y, X, W, ndraw=1000, burn.in=100, thinning=1,
     cflag <- 1
     p     <- k - 1
   }else{
-    stop('semprobit: intercept term must be in first column of the X-matrix')
+    stop("semprobit: intercept term must be in first column of the X-matrix")
   }
   
   # MCMC sampling of beta
   rho  <- start$rho          # start value of row
   beta <- start$beta         # start value of parameters, prior value, we could also sample from beta ~ N(c, T)
+  sige <- start$sige         # start value for sigma_e
   
   # conjugate prior beta ~ N(c, T)
   # parametrize, default to diffuse prior, for beta, e.g. T <- diag(k) * 1e12
@@ -184,10 +157,23 @@ sem_probit_mcmc <- function(y, X, W, ndraw=1000, burn.in=100, thinning=1,
   } else {
     T <- diag(k)*1e12
   }
+  # prior for sige ~ IG(nu, d0)
+  if (is.numeric(prior$nu)) {
+    nu <- prior$nu
+  } else {
+    nu <- 0
+  }
+  if (is.numeric(prior$d0)) {
+    d0 <- prior$d0
+  } else {
+    d0 <- 0
+  }
   
-  Tinv <- solve(T)           # T^{-1}
+  
+  TI <- solve(T)           # T^{-1}
+  TIc <- TI%*%c            # T^{-1}c
   S <- I_n - rho * W
-  H <- t(S) %*% S            # precision matrix H for beta | rho, z, y
+  H <- t(S) %*% S / sige   # precision matrix H for beta | rho, z, y, sige
   
   # truncation points for z, depend only on y, can be precalculated
   lower <- ifelse(y > 0, 0,  -Inf)
@@ -203,35 +189,33 @@ sem_probit_mcmc <- function(y, X, W, ndraw=1000, burn.in=100, thinning=1,
   # rho ~ Beta(a1, a2) prior
   a1         <-  1.0
   a2         <-  1.0
-  lnbprior <- log(beta_prior(detval[,1],a1,a2))
+  if(is.numeric(prior$a1)) a1 <- prior$a1
+  if(is.numeric(prior$a2)) a2 <- prior$a2
+  
   u        <- runif(thinning * ndraw + burn.in)   # u ~ U(0, 1)
   nrho     <- 2001
   nmk      <- (n-k)/2
   detval1  <- detval[,1]  # SW: avoid multiple accesses to detval[,1]
   detval2  <- detval[,2]
-  detval1sq <- detval1 * detval1
-  yy        <- (detval1[2:nrho] + detval1[1:(nrho-1)])
-    
-  # matrix to store the beta + rho parameters for each iteration/draw
-  B <- matrix(NA, ndraw, k+1)
+      
+  # matrix to store the beta + sige + rho parameters for each iteration/draw
+  B <- matrix(NA, ndraw, k+2)
+  colnames(B) <- c(colnames(X), "sige", "rho")
+  
+  cc <- 0.2         # initial tuning parameter for M-H sampling
+  acc <- 0          # number of accepted samples 
+  acc_rate <- rep(NA, thinning * ndraw + burn.in)
   
   # progress bar
   if (showProgress) {
     pb <- txtProgressBar(min=0, max=(thinning * ndraw + burn.in), initial=0, style=3)
   }
   
-  # immutable matrices
-  tX <- t(X)                       # X'               # k x n
-  xpx  <- t(X) %*% X               # (X'X)            # k x k
-  xpxI <- solve(xpx)               # (X'X)^{-1}       # k x k
-  #xxpxIxp <- X %*% xpxI %*% tX    # X(X'X)^(-1)X'    # n x n (argh!)
-  xxpxI    <- X %*% xpxI           # X(X'X)^(-1)     # n x k (better, compromise)
-  AA       <- solve(xpx + Tinv)    # (X'X + T^{-1})^{-1}
-  
-  # draw from multivariate normal beta ~ N(c, T). we can precalculate 
-  # betadraws ~ N(0, T) before running the chain and later just create beta as
-  # beta = c + betadraws ~ N(c, T)
-  betadraws <- rmvnorm(n=(burn.in + ndraw * thinning), mean=rep(0, k), sigma=AA)
+  # beta draws: Unlike the SAR Probit model, mean and variance of beta ~ N(c, T)
+  # change with every iteration. Hence, we draw betadraw ~ N(0, I)
+  # before running the chain and later just create beta as
+  # beta = c + T^{1/2} %*% betadraws
+  betadraws <- rmvnorm(n=(burn.in + ndraw * thinning), mean=rep(0, k), sigma=diag(k))
   
   # names of non-constant parameters
   if(cflag == 0) {
@@ -241,39 +225,111 @@ sem_probit_mcmc <- function(y, X, W, ndraw=1000, burn.in=100, thinning=1,
   }
     
   # just to set a start value for z
-  z <- rep(0, n)
+  #z <- rep(0, n)
+  z <- y
+  Wz <- W%*%z
+  WX <- W%*%X
+  
+  W2diag <- diag(t(W)%*%W,0)
   
   for (i in (1 - burn.in):(ndraw * thinning)) {
   
-  # 1. sample from z | rho, beta, y using precision matrix H
-  # z ~ N(X beta, H)
-  mu <- X %*% beta
+  # update beta   
+  SX <- X - rho*WX
+  AI <- solve(t(SX) %*% SX + sige * TI)
+  Sz <- z - rho*Wz
+  b <- t(SX) %*% Sz + sige * TIc
+  b0 <- AI %*% b
+  beta <- as.double(rmvnorm(n=1, mean=b0, sigma=as.matrix(sige*AI)))
   
-  # see LeSage (2009) for choice of burn-in size, often m=5 or m=10 is used!
-  # we can also use m=1 together with start.value=z, see LeSage (2009), section 10.1.5
+  # update sige
+  nu1 <- n + 2*nu
+  e <- Sz - SX %*% beta
+  d1 <- 2*d0 + crossprod(e)
+  chi <- rchisq(n=1,df=nu1)
+  sige <- as.double(d1/chi)
+  
+  # update z-values
+  mu <- X %*% beta;
+  zmu <- z - mu;                  
+  dsig <- rep(1, n) - rho*rho * W2diag
+  zvar <- rep(1, n)/dsig;            # variance (n x 1)
+  A  <- (1/sige)*(I_n-rho*W)%*%zmu   # a vector (n x 1)
+  B2  <- t(I_n-rho*W) %*% A          # a vector (n x 1)
+  Cz <- zmu - zvar*B2
+  zm <- mu + Cz;                     # mu
+          
+  ind = which(y == 0);
+  z[ind] <- rtnorm(mu=zm[ind], sd=sqrt(zvar[ind]), a=-Inf, b=0)
+            
+  ind = which(y == 1);
+  z[ind] <- rtnorm(mu=zm[ind], sd=sqrt(zvar[ind]), a=0, b=Inf)
+  
+  if(any(is.infinite(z))) cat("zm=",zm[is.infinite(z)],"sd=",sqrt(zvar[is.infinite(z)]),"\n")
+  
+  H <- (1/sige)*t(I_n-rho*W)%*%(I_n-rho*W)
   if (m==1) {
-    z <- as.double(rtmvnorm.sparseMatrix(n=1, mean=mu, H=H, 
-      lower=lower, upper=upper, burn.in=m, start.value=z))
+    z2 <- as.double(rtmvnorm.sparseMatrix(n=1, mean=mu, H=H, 
+        lower=lower, upper=upper, burn.in=m, start.value=z))
   } else {
-    z <- as.double(rtmvnorm.sparseMatrix(n=1, mean=mu, H=H, 
+      z2 <- as.double(rtmvnorm.sparseMatrix(n=1, mean=mu, H=H, 
       lower=lower, upper=upper, burn.in=m))
   }
-    
-  # 2. sample from beta | rho, z, y
-  # SAR Probit: c <- AA  %*% (tX %*% S %*% z + Tinv %*% c)
-  # SEM Probit: c <- AA  %*% (tX %*% z + Tinv %*% c)
-  c <- AA  %*% (tX %*% z + Tinv %*% c)
-  T <- AA   # no update basically on T, TODO: check this
-  beta <- as.double(c + betadraws[i + burn.in, ])
+  if (any(is.na(z2))) {
+    cat("i=",i,"sige=",sige,"mu=",mu,"det(H)=",det(H),"\n")
+    # Fallback
+    ind = which(y == 0);
+    z[ind] <- rtnorm(mu=zm[ind], sd=sqrt(zvar[ind]), a=-Inf, b=0)
+            
+    ind = which(y == 1);
+    z[ind] <- rtnorm(mu=zm[ind], sd=sqrt(zvar[ind]), a=0, b=Inf)
+  }
+  # reformulate Wz
+  Wz = W%*%z
+      
+  # 3. sample from rho | beta, z, sige using Metropolis-Hastings with burn.in=20
+  # update rho using metropolis-hastings
+  # numerical integration is too slow here
+  #cat("i=",i,"Drawing rho. rho=",rho,"cc=",cc," i2=",(i + burn.in)," acc_rate=",acc_rate[i + burn.in - 1],"\n")
+  xb <- X%*%beta;
+  rhox <- c_sem(rho,z,X,beta,sige,I_n,W,detval1,detval2,rep(1,n),a1,a2);
+  accept <- 0
+  rho2 <- rho + cc * rnorm(1)
+  while(accept == 0) {
+    if ((rho2 > rmin) & (rho2 < rmax)) { 
+      accept <- 1
+    }  
+    else {
+      rho2 <- rho + cc * rnorm(1)
+    } 
+  }
+  rhoy <- c_sem(rho2,z,X,beta,sige,I_n,W,detval1,detval2,rep(1,n),a1,a2)
+  ru <- runif(1,0,1) # TODO: Precalculate ru
+  if ((rhoy - rhox) > exp(1)) {
+    p <- 1
+  } else {
+    ratio <- exp(rhoy-rhox)
+    p <- min(1,ratio)
+  }
+  if (ru < p) {
+    rho <- rho2
+    acc <- acc + 1
+  }
+  acc_rate[i + burn.in] <- acc/(i + burn.in)
+  # update cc based on std of rho draws
+  if (acc_rate[i + burn.in] < 0.4) {
+    cc <- cc/1.1;
+  }
+  if (acc_rate[i + burn.in] > 0.6) {
+    cc <- cc*1.1;
+  }
   
-  # 3. sample from rho | beta, z using Metropolis-Hastings with burn.in=20
-  rho  <- draw_rho_metropolis(type="SEM", n=1, z, I_n, W, X, burn.in=20, start.value=rho, c=1)$rho_t[20+1]
   
   ############################################################################## 
   
   # update S and H
   S <- I_n - rho * W
-  H <- t(S) %*% S      # H = S'S  / SW: crossprod(S) does not seem to work!
+  H <- (1/sige) * t(S) %*% S      # H = t(S)%*%S  / SW: crossprod(S) does not seem to work!
 
   if (i > 0) {
     if (thinning == 1) {
@@ -284,8 +340,7 @@ sem_probit_mcmc <- function(y, X, W, ndraw=1000, burn.in=100, thinning=1,
     } else {
       next
     }
-    
-    B[ind,] <- c(beta, rho)
+    B[ind,] <- c(beta, sige, rho)
   
   ##############################################################################
     
@@ -299,12 +354,13 @@ sem_probit_mcmc <- function(y, X, W, ndraw=1000, burn.in=100, thinning=1,
   # fitted values for estimates (based on z rather than binary y like in fitted(glm.fit))
   # (on reponse scale y vs. linear predictor scale z...)
   beta  <- colMeans(B)[1:k]
-  rho   <- colMeans(B)[k+1]
+  sige  <- colMeans(B)[k+1]
+  rho   <- colMeans(B)[k+2]
   S     <- (I_n - rho * W)
   fitted.values   <- X %*% beta                     # E[z | beta] = (X * beta)
   fitted.response <- as.numeric(fitted.values >= 0) 
   # TODO: linear.predictors  vs. fitted.values
-  
+ 
   # result
   results       <- NULL
   results$time  <- Sys.time() - timet
@@ -313,7 +369,8 @@ sem_probit_mcmc <- function(y, X, W, ndraw=1000, burn.in=100, thinning=1,
   results$y     <- y 
   results$zip   <- n - sum(y) # number of zero values in the y-vector
   results$beta  <- colMeans(B)[1:k]
-  results$rho   <- colMeans(B)[k+1]
+  results$sige  <- sige
+  results$rho   <- colMeans(B)[k+2]
   results$coefficients <- colMeans(B)
   results$fitted.values <- fitted.values
   #results$fitted.reponse <- fitted.reponse  # fitted values on reponse scale (binary y variable)
@@ -321,16 +378,19 @@ sem_probit_mcmc <- function(y, X, W, ndraw=1000, burn.in=100, thinning=1,
   results$nomit <- burn.in
   results$a1        <- a1
   results$a2        <- a2
+  results$nu        <- nu
+  results$d0        <- d0
   results$rmax      <- rmax 
   results$rmin      <- rmin
-  results$tflag     <- 'plevel'
+  results$tflag     <- "plevel"
   results$lflag     <- ldetflag
   results$cflag     <- cflag
   results$lndet     <- detval
-  results$names     <- c(colnames(X), 'rho')
-  results$B         <- B        # (beta, rho) draws
+  results$names     <- c(colnames(X), "sige", "rho")
+  results$B         <- B        # (beta, sige, rho) draws
   results$bdraw     <- B[,1:k]  # beta draws
-  results$pdraw     <- B[,k+1]  # rho draws
+  results$sdraw     <- B[,k+1]  # sige draws
+  results$pdraw     <- B[,k+2]  # rho draws
   #results$total     <- total
   #results$direct    <- direct
   #results$indirect  <- indirect
@@ -340,6 +400,39 @@ sem_probit_mcmc <- function(y, X, W, ndraw=1000, burn.in=100, thinning=1,
   #results$predicted <- # prediction required. The default is on the scale of the linear predictors
   class(results)    <- "semprobit"
   return(results)
+}
+
+#% PURPOSE: evaluate the conditional distribution of rho given sige
+#%  spatial autoregressive model using sparse matrix algorithms
+#% ---------------------------------------------------
+#%  USAGE:cout = c_sar(rho,y,x,b,sige,W,detval,a1,a2)
+#%  where:  rho  = spatial autoregressive parameter
+#%          y    = dependent variable vector
+#%          W    = spatial weight matrix
+#%        detval = an (ngrid,2) matrix of values for det(I-rho*W) 
+#%                 over a grid of rho values 
+#%                 detval(:,1) = determinant values
+#%                 detval(:,2) = associated rho values
+#%          sige = sige value
+#%          a1    = (optional) prior parameter for rho
+#%          a2    = (optional) prior parameter for rho
+#% ---------------------------------------------------
+#%  RETURNS: a conditional used in Metropolis-Hastings sampling
+#%  NOTE: called only by sar_g
+#%  --------------------------------------------------
+#%  SEE ALSO: sar_g, c_far, c_sac, c_sem
+#% ---------------------------------------------------
+c_sem <- function(rho,y,X,b,sige,I_n,W,detval1,detval2,vi,a1,a2) {
+ i <- findInterval(rho,detval1)
+ if (i == 0) index=1
+ else index=i;
+ detm = detval2[index]; 
+ z = I_n - rho*W;
+ e = as.double(z %*% (y - X %*% b));
+ ev = e * sqrt(vi);
+ epe = (crossprod(ev))/(2*sige);
+ cout =  as.double(detm - epe);  # log-density
+ return(cout)
 }
 
 # extract the coefficients
@@ -387,7 +480,7 @@ summary.semprobit <- function(object, var_names=NULL, file=NULL, digits = max(3,
   
   if(is.null(file)){file <- ""}#output to the console
   #HEADER
-  write(sprintf("--------MCMC spatial autoregressive probit--------"), file, append=T)
+  write(sprintf("--------MCMC probit with spatial errors ---------"), file, append=T)
   #sprintf("Dependent Variable")
   write(sprintf("Execution time  = %6.3f %s", object$time, attr(object$time, "units"))  , file, append=T)
   write(sprintf("N steps for TMVN= %6d"  , object$nsteps), file, append=T)
@@ -466,42 +559,15 @@ plot.semprobit <- function(x, which=c(1, 2, 3),
  }
 }
 
-if (FALSE) {
-# example:
-library(tmvtnorm)
-library(Matrix)
-
-n <- d <- 300
-m <- 3
-W <- sparseMatrix(i=rep(1:d, each=m), 
-  j=replicate(d, sample(x=1:d, size=m, replace=FALSE)), x=1/m, dims=c(d, d))
-I_n <- sparseMatrix(i=1:n, j=1:n, x=1)
-eps <- rnorm(n=n, mean=0, sd=1)   # Normierung!!!
-rho <- 0.75
-X   <- cbind(x1=1, x2=runif(n=n, -2, 2))
-beta <- c(-0.2, 0.5)
-
-z <- as.vector(X %*% beta + solve(I_n - rho * W) %*% eps)     # SEM model
-y <- as.numeric(z >= 0)
-mu <- X %*% beta
-
-# truncation points for z, depend only on y, can be precalculated
-lower <- ifelse(y > 0, 0,  -Inf)
-upper <- ifelse(y > 0, Inf,   0)
-
-S <- I_n - rho * W
-H <- t(S) %*% S            # precision matrix H for beta | rho, z, y
-
-znew <- as.double(rtmvnorm.sparseMatrix(n=1, mean=mu, H=H, lower=lower, upper=upper, burn.in=10))
-
-# stürzt in rtmvnorm.sparseMatrix ab, wenn I_n/W dense "matrix" sind.
-# dann ist auch H eine dense matrix. TODO: Fehler abfangen!
-Rprof("SEM-probit.out")
-fit <- sem_probit_mcmc(y, X, W, ndraw=500, burn.in=100, thinning=2, showProgress=TRUE)
-Rprof(NULL)
-summaryRprof("SEM-probit.out")
-summary(fit)
-plot(fit)
+# 1 Sample truncated univariate normal vectorized
+rtnorm <- function (mu = 0, sd = 1, a = -Inf, b = Inf)
+{
+  F <- runif(n=length(mu))
+  Fa <- pnorm((a - mu)/sd, 0, sd = 1)
+  Fa[a == -Inf] <- 0
+  Fb <- pnorm((b - mu)/sd, 0, sd = 1)
+  Fb[b == Inf] <- 1
+  y <- mu + sd * qnorm(F * (Fb - Fa) + Fa)
+  y
 }
-
 
