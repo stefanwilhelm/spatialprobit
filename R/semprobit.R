@@ -227,72 +227,79 @@ sem_probit_mcmc <- function(y, X, W, ndraw=1000, burn.in=100, thinning=1,
   # just to set a start value for z
   #z <- rep(0, n)
   z <- y
-  Wz <- W%*%z
-  WX <- W%*%X
-  
-  W2diag <- diag(t(W)%*%W,0)
+  ones <- rep(1, n)
+  W2diag <- diag(t(W)%*%W)
   
   for (i in (1 - burn.in):(ndraw * thinning)) {
-  
-  # update beta   
-  SX <- X - rho*WX
-  AI <- solve(t(SX) %*% SX + sige * TI)
-  Sz <- z - rho*Wz
-  b <- t(SX) %*% Sz + sige * TIc
-  b0 <- AI %*% b
-  beta <- as.double(rmvnorm(n=1, mean=b0, sigma=as.matrix(sige*AI)))
+    
+  # update beta given rho, z  
+  SX  <- S %*% X                          # n x k matrix; sparse
+  tSX <- t(SX)                            # k x n matrix; sparse
+  tSXSX <- as.matrix(tSX %*% SX)          # k x k matrix; dense
+  AI <- solve(tSXSX + sige * TI)          # k x k matrix; dense
+  Sz <- as.double(S %*% z)                # n x 1 vector
+  b <- as.double(tSX %*% Sz + sige * TIc) # k x 1 vector
+  b0 <- AI %*% b                          # k x 1 vector
+  beta <- as.double(rmvnorm(n=1, mean=b0, sigma=sige*AI))
   
   # update sige
   nu1 <- n + 2*nu
-  e <- Sz - SX %*% beta
+  e <- as.double(S %*% (z - X %*% beta))  # n x 1 vector
   d1 <- 2*d0 + crossprod(e)
   chi <- rchisq(n=1,df=nu1)
   sige <- as.double(d1/chi)
   
-  # update z-values
+  # Update H = 1/sige*t(S)%*%S after update of sige
+  H <- t(S) %*% S / sige
+  
+  # update z-values given beta, sigma, rho and old z:
+  #
+  # univariate conditional distributions as univariate truncated normals:
+  # p(z_{i}^(t) | z_{-i}^(t-1), beta, rho, sige)
+  #
+  # E[z_i^(t) | z_{-i}^(t-1)] = mu_i - H_{ii}^{-1} H_{i,-i} [ z_{-i}^(t-1) - mu_{-i}^(t-1) ]
+  #                           = mu_i - H_{ii}^{-1} H_{i,.} [ z^(t-1) - mu^(t-1) ] + (z_{i}^(t-1) - mu_i^(t-1))
+  # 
+  # Vektorisiert für alle z_i | z_{-i} untereinandergeschrieben:
+  # E[z^(t) | z_{-i}^(t-1) ]  = mu^(t-1)  - diag(H)^{-1} H [ z^(t-1) - mu^(t-1) ] + [ z^(t-1) - mu^(t-1) ]
+  # 
+  # H = 1/sige * (I_n - rho * W)'(I_n - rho * W) = 1/sige * (I_n - 2*rho*W + rho^2*W^2)
+  # diag(H) = H_{ii} = diag(I_n - 2*rho*W + rho^2*W^2) = diag(I_n) + rho^2*diag(W^2)
+  # because diag(W) = 0!
+  #
+  # 
   mu <- X %*% beta;
   zmu <- z - mu;                  
-  dsig <- rep(1, n) - rho*rho * W2diag
-  zvar <- rep(1, n)/dsig;            # variance (n x 1)
-  A  <- (1/sige)*(I_n-rho*W)%*%zmu   # a vector (n x 1)
-  B2  <- t(I_n-rho*W) %*% A          # a vector (n x 1)
+  dsig <- ones - rho * rho * W2diag  # SW: Sollte es nicht ones + rho * rho * W2diag sein?
+  zvar <- ones/dsig;            # conditional variances for each z_i | z = H_{ii}^{-1} = 1/diag(H) (n x 1)
+                                  # TODO: check if sige is missing in zvar
+  A  <- (1/sige)* S %*% zmu     # a vector (n x 1)
+  B2  <- t(S) %*% A             # B2 <- (1/sige) * t(S) %*% S %*% zmu
   Cz <- zmu - zvar*B2
-  zm <- mu + Cz;                     # mu
-          
-  ind = which(y == 0);
+  zm <- mu + Cz;                # mu + (z-mu) - zvar * t(S)[ (1/sige) * S * (z - mu) ]
+  
+  ind <- which(y == 0)
   z[ind] <- rtnorm(mu=zm[ind], sd=sqrt(zvar[ind]), a=-Inf, b=0)
             
-  ind = which(y == 1);
+  ind <- which(y == 1)
   z[ind] <- rtnorm(mu=zm[ind], sd=sqrt(zvar[ind]), a=0, b=Inf)
   
-  if(any(is.infinite(z))) cat("zm=",zm[is.infinite(z)],"sd=",sqrt(zvar[is.infinite(z)]),"\n")
-  
-  H <- (1/sige)*t(I_n-rho*W)%*%(I_n-rho*W)
-  if (m==1) {
-    z2 <- as.double(rtmvnorm.sparseMatrix(n=1, mean=mu, H=H, 
-        lower=lower, upper=upper, burn.in=m, start.value=z))
-  } else {
-      z2 <- as.double(rtmvnorm.sparseMatrix(n=1, mean=mu, H=H, 
-      lower=lower, upper=upper, burn.in=m))
-  }
-  if (any(is.na(z2))) {
-    cat("i=",i,"sige=",sige,"mu=",mu,"det(H)=",det(H),"\n")
-    # Fallback
-    ind = which(y == 0);
-    z[ind] <- rtnorm(mu=zm[ind], sd=sqrt(zvar[ind]), a=-Inf, b=0)
-            
-    ind = which(y == 1);
-    z[ind] <- rtnorm(mu=zm[ind], sd=sqrt(zvar[ind]), a=0, b=Inf)
-  }
-  # reformulate Wz
-  Wz = W%*%z
+  # TODO: check why sampling with rtmvnorm.sparseMatrix does not work. 
+  # Chain is exploding in this case. Conditional variance is different to LeSage code.
+  # multivariate truncated normal given beta, rho, sige
+  # H <- (1/sige)*t(S)%*%S
+  #if (m==1) {
+  # z <- as.double(rtmvnorm.sparseMatrix(n=1, mean=mu, H=H, 
+  #      lower=lower, upper=upper, burn.in=m, start.value=z))
+  #} else {
+  # z <- as.double(rtmvnorm.sparseMatrix(n=1, mean=mu, H=H, 
+  #   lower=lower, upper=upper, burn.in=m))
+  #}
       
   # 3. sample from rho | beta, z, sige using Metropolis-Hastings with burn.in=20
   # update rho using metropolis-hastings
   # numerical integration is too slow here
-  #cat("i=",i,"Drawing rho. rho=",rho,"cc=",cc," i2=",(i + burn.in)," acc_rate=",acc_rate[i + burn.in - 1],"\n")
-  xb <- X%*%beta;
-  rhox <- c_sem(rho,z,X,beta,sige,I_n,W,detval1,detval2,rep(1,n),a1,a2);
+  rhox <- c_sem(rho,z,X,beta,sige,I_n,W,detval1,detval2,ones,a1,a2)
   accept <- 0
   rho2 <- rho + cc * rnorm(1)
   while(accept == 0) {
@@ -303,7 +310,7 @@ sem_probit_mcmc <- function(y, X, W, ndraw=1000, burn.in=100, thinning=1,
       rho2 <- rho + cc * rnorm(1)
     } 
   }
-  rhoy <- c_sem(rho2,z,X,beta,sige,I_n,W,detval1,detval2,rep(1,n),a1,a2)
+  rhoy <- c_sem(rho2,z,X,beta,sige,I_n,W,detval1,detval2,ones,a1,a2)
   ru <- runif(1,0,1) # TODO: Precalculate ru
   if ((rhoy - rhox) > exp(1)) {
     p <- 1
@@ -315,22 +322,22 @@ sem_probit_mcmc <- function(y, X, W, ndraw=1000, burn.in=100, thinning=1,
     rho <- rho2
     acc <- acc + 1
   }
-  acc_rate[i + burn.in] <- acc/(i + burn.in)
+  iter <- i + burn.in
+  acc_rate[iter] <- acc/iter
   # update cc based on std of rho draws
-  if (acc_rate[i + burn.in] < 0.4) {
+  if (acc_rate[iter] < 0.4) {
     cc <- cc/1.1;
   }
-  if (acc_rate[i + burn.in] > 0.6) {
+  if (acc_rate[iter] > 0.6) {
     cc <- cc*1.1;
   }
-  
-  
+    
   ############################################################################## 
   
-  # update S and H
+  # update S and H after update of rho
   S <- I_n - rho * W
-  H <- (1/sige) * t(S) %*% S      # H = t(S)%*%S  / SW: crossprod(S) does not seem to work!
-
+  H <- t(S) %*% S / sige
+  
   if (i > 0) {
     if (thinning == 1) {
       ind <- i
@@ -373,7 +380,6 @@ sem_probit_mcmc <- function(y, X, W, ndraw=1000, burn.in=100, thinning=1,
   results$rho   <- colMeans(B)[k+2]
   results$coefficients <- colMeans(B)
   results$fitted.values <- fitted.values
-  #results$fitted.reponse <- fitted.reponse  # fitted values on reponse scale (binary y variable)
   results$ndraw <- ndraw
   results$nomit <- burn.in
   results$a1        <- a1
@@ -391,12 +397,8 @@ sem_probit_mcmc <- function(y, X, W, ndraw=1000, burn.in=100, thinning=1,
   results$bdraw     <- B[,1:k]  # beta draws
   results$sdraw     <- B[,k+1]  # sige draws
   results$pdraw     <- B[,k+2]  # rho draws
-  #results$total     <- total
-  #results$direct    <- direct
-  #results$indirect  <- indirect
   results$W <- W
   results$X <- X
-
   #results$predicted <- # prediction required. The default is on the scale of the linear predictors
   class(results)    <- "semprobit"
   return(results)
@@ -422,16 +424,17 @@ sem_probit_mcmc <- function(y, X, W, ndraw=1000, burn.in=100, thinning=1,
 #%  --------------------------------------------------
 #%  SEE ALSO: sar_g, c_far, c_sac, c_sem
 #% ---------------------------------------------------
+# Code from James P. LeSage; ported to R by Stefan Wilhelm
 c_sem <- function(rho,y,X,b,sige,I_n,W,detval1,detval2,vi,a1,a2) {
  i <- findInterval(rho,detval1)
  if (i == 0) index=1
- else index=i;
- detm = detval2[index]; 
+ else index=i
+ detm = detval2[index] 
  z = I_n - rho*W;
- e = as.double(z %*% (y - X %*% b));
- ev = e * sqrt(vi);
- epe = (crossprod(ev))/(2*sige);
- cout =  as.double(detm - epe);  # log-density
+ e = as.double(z %*% (y - X %*% b))
+ ev = e * sqrt(vi)
+ epe = (crossprod(ev))/(2*sige)
+ cout =  as.double(detm - epe)  # log-density
  return(cout)
 }
 
@@ -496,17 +499,17 @@ summary.semprobit <- function(object, var_names=NULL, file=NULL, digits = max(3,
         c("Estimate", "Std. Dev", "Bayes p-level", "t-value", "Pr(>|z|)"))
   printCoefmat(coefficients, digits = digits,
     signif.stars = getOption("show.signif.stars"))      
-  if (getOption("show.signif.stars")) {               
-    # The solution: using cat() instead of print() and use line breaks
-    # cat(paste(strwrap(x, width = 70), collapse = "\\\\\n"), "\n")
-    # http://r.789695.n4.nabble.com/Sweave-line-breaks-td2307755.html
-    Signif <- symnum(1e-6, corr = FALSE, na = FALSE,
-                  cutpoints = c(0, 0.001, 0.01, 0.05, 0.1, 1),
-                  symbols = c("***", "**", "*", ".", " "))
-    x <- paste("Signif. codes: ", attr(Signif, "legend"), "\n", sep="")
-    cat(paste(strwrap(x, width = getOption("width")), collapse = "\\\n"), "\n")
-  }
-  return(invisible(coefficients))
+#  if (getOption("show.signif.stars")) {               
+#    # The solution: using cat() instead of print() and use line breaks
+#    # cat(paste(strwrap(x, width = 70), collapse = "\\\\\n"), "\n")
+#    # http://r.789695.n4.nabble.com/Sweave-line-breaks-td2307755.html
+#    Signif <- symnum(1e-6, corr = FALSE, na = FALSE,
+#                  cutpoints = c(0, 0.001, 0.01, 0.05, 0.1, 1),
+#                  symbols = c("***", "**", "*", ".", " "))
+#    x <- paste("Signif. codes: ", attr(Signif, "legend"), "\n", sep="")
+#    cat(paste(strwrap(x, width = getOption("width")), collapse = "\\\n"), "\n")
+#  }
+   return(invisible(coefficients))
 } 
 
 # plot MCMC results for class "semprobit" (draft version);
@@ -557,17 +560,5 @@ plot.semprobit <- function(x, which=c(1, 2, 3),
      if (!is.null(trueparam)) abline(v=trueparam[i], col="red", lty=2)
    }
  }
-}
-
-# 1 Sample truncated univariate normal vectorized
-rtnorm <- function (mu = 0, sd = 1, a = -Inf, b = Inf)
-{
-  F <- runif(n=length(mu))
-  Fa <- pnorm((a - mu)/sd, 0, sd = 1)
-  Fa[a == -Inf] <- 0
-  Fb <- pnorm((b - mu)/sd, 0, sd = 1)
-  Fb[b == Inf] <- 1
-  y <- mu + sd * qnorm(F * (Fb - Fa) + Fa)
-  y
 }
 

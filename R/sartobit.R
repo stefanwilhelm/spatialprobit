@@ -1,8 +1,9 @@
 if (FALSE) {
  source("stats_distributions.r")
  source("rtnorm.R")
-}
+ source("SpatialProbit-MCMC.R")
 
+}
 
 #Bayesian estimates of the spatial autoregressive tobit model
 #          y = rho*W*y + XB + e, e = N(0,sige*Omega), Omega = inv[(I_n-rho*W)'*(I_n -rho*W)]
@@ -51,9 +52,10 @@ sartobit <- function(y, X, W, ndraw=1000, burn.in=100, thinning=1,
   if (is.null(colnames(X))) colnames(X) <- paste("x",1:k,sep="")
 
   #validate inputs
-  if( any(y < 0) ){
-    stop('sartobit: not all y-values are greater or equal to 0')
-  }
+  # TODO: uncomment
+  #if( any(y < 0) ){
+  #  stop('sartobit: not all y-values are greater or equal to 0')
+  #}
   if( n1 != n2 && n1 != n ){
     stop('sartobit: wrong size of spatial weight matrix W')
   }
@@ -146,8 +148,7 @@ sartobit <- function(y, X, W, ndraw=1000, burn.in=100, thinning=1,
   tX <- t(X)                       # X'               # k x n
   xpx  <- t(X) %*% X               # (X'X)            # k x k
   xpxI <- solve(xpx)               # (X'X)^{-1}       # k x k
-  #xxpxIxp <- X %*% xpxI %*% tX    # X(X'X)^(-1)X'    # n x n (argh!)
-  xxpxI    <- X %*% xpxI           # X(X'X)^(-1)     # n x k (better, compromise)
+  xxpxI    <- X %*% xpxI           # X(X'X)^(-1)      # n x k (better, compromise)
 
   # matrices for direct and indirect impacts
   direct       <- matrix(NA, ndraw,p)    # n x p
@@ -166,31 +167,31 @@ sartobit <- function(y, X, W, ndraw=1000, burn.in=100, thinning=1,
   
   yin <- y    # input values for y
   ind1 <- which(yin == 0)    # index vector for censored observations y=0
-  nobs0 <- length(ind1)      # number of censored observations
+  nobs1 <- length(ind1)      # number of censored observations
   ind2 <- which(yin > 0)
-  nobs1 <- length(ind2)
+  nobs2 <- length(ind2)
 
   for (i in (1 - burn.in):(ndraw * thinning)) {
   
     # update beta | y, rho, sige
     AI <- solve(xpx + sige*TI)
-    Sy <- S%*%y
-    b  <- tX%*%Sy + sige*TIc
+    Sy <- as.double(S%*%y)            # (n x 1)
+    b  <- tX%*%Sy + sige*TIc          # (k x 1)
     b0 <- AI %*% b
     beta <- as.double(rmvnorm(n=1, mean=b0, sigma=sige*AI))
-    Xb <- X%*%beta;
+    Xb <- X%*%beta
 
     # update sige
     nu1 <- n + 2*nu
-    e <- (Sy - Xb)              # residuals
+    e <- (Sy - Xb)              # (n x 1), residuals
     d1 <- 2*d0 + crossprod(e)
     chi <- rchisq(n=1,df=nu1)
     sige <- as.double(d1/chi)
-    
+        
     # draw rho
     if (metflag == 1) {
       # metropolis step to get rho update
-      rhox <- c_sar(rho,y,xb,sige,W,detval1,detval2)
+      rhox <- c_sar(rho,y,Xb,sige,W,detval1,detval2)
       accept <- 0
       rho2 <- rho + cc*rnorm(n=1)
       while (accept == 0) {
@@ -200,7 +201,7 @@ sartobit <- function(y, X, W, ndraw=1000, burn.in=100, thinning=1,
          rho2 <- rho + cc*rnorm(n=1)
         }
       }
-      rhoy <- c_sar(rho2,y,xb,sige,W,detval1,detval2)
+      rhoy <- c_sar(rho2,y,Xb,sige,W,detval1,detval2)
       ru <- runif(n=1,0,1)
       if ((rhoy - rhox) > exp(1)) {
         pp <- 1
@@ -227,9 +228,9 @@ sartobit <- function(y, X, W, ndraw=1000, burn.in=100, thinning=1,
       # when metflag == 0,
       # we use numerical integration to perform rho-draw
       xpy  <- tX %*% y            # X'y
-      Wy   <- as.double(W %*% y)  # Wy        # SW: coerce Wz to vector
+      Wy   <- as.double(W %*% y)  # Wy (n x 1) # SW: coerce Wz to vector
       # (from n x 1 sparse matrix! we do not need a sparse matrix here)
-      xpWy <- tX %*% Wy           # X'Wz      # k x 1
+      xpWy <- tX %*% Wy           # X'Wy      # k x 1
       e0   <-  y - xxpxI %*% xpy  # y  - X(X'X)^-1X' y
       ed   <- Wy - xxpxI %*% xpWy # Wy - X(X'X)^(-1)X'Wy
       epe0 <- as.double(crossprod(e0))  # slightly faster than t(e0) %*% e0
@@ -238,40 +239,36 @@ sartobit <- function(y, X, W, ndraw=1000, burn.in=100, thinning=1,
       rho  <- draw_rho(detval1, detval2, rho_gridsq, yy, epe0, eped, epe0d, rho, nmk=nmk, nrho=2001, lnbprior, u=u[i + burn.in])
     }
     
+    if (nobs1 > 0) {
     # update z-values for all zero-observations
     z <- rep(0, n)
 
     # loop over i
     S <- (I_n - rho*W)
     mu <- as.double(solve(qr(S), X %*% beta)) # (n x 1)
-
-    tauinv <- (t(S)%*%S)/sige           # H
-    aa <- diag(tauinv)                  # H_{ii}
-    h <- as.double(rep(1,n)/sqrt(aa))   # (n x 1) vector, conditional standard deviation sqrt(H_{ii}^{-1})
-    c <- (-tauinv) / aa                 # (n x n) matrix
-    ctilde <- as.matrix(c - diag(diag(c))) # (n x n) matrix
-    #browser()
-
-    # nsample ist Gibbs sampler iterations (e.g. m=1, m=10); defaults to 5
-    for (initer in 1:nsample) {
-      for (j in ind1) {
-         # for all zero observations (censored observations) y=0
-         aa <- ctilde[j,] %*% z;       # conditional mean
-         muuse <- (-mu[j]-aa)/h[j];    # z-Standardisierung
-         t1 <- rtnorm(mu=0, sd=1, a=muuse, b=Inf)  # draw from univariate truncated normal TN(mu=0, sd=1, a=muuse, b=Inf)
-         z[j] <- aa + h[j]*t1;         # transform back to z_j | z_{-j} ~ TN(mu=aa, var=h[i], a=0, b=Inf)
-      }
-    }
-    y[ind1] <- mu[ind1] + z[ind1]
     
-    # SW: Wäre es nicht besser, alle y als condition herzunehmen?
-    if (FALSE) {
-      H <-(t(S)%*%S)/sige
-      ym <- mu[ind1] - 1/diag(H)[ind1] * H[ind1,] %*% (y - mu)
-      yvar <- 1/diag(H)[ind1]
-      y[ind1] <- rtnorm(mu=zm[ind], sd=sqrt(yvar[ind]), a=0, b=Inf)
+    # see LeSage(2009), chapter 10, 10.3 Spatial Tobit models, p.299-305
+    # precision matrix H / Phi partioned as [ind1, ind2] where ind1 are censored obs
+    # H = [ H_11  H_12 ]
+    #     [ H_21  H_22 ]
+    H <-(t(S)%*%S)/sige 
+    H_11 <- H[ind1,ind1]   
+    H_12 <- H[ind1,ind2]
+    HI_11 <- 1/diag(H)[ind1]  
+    
+    # conditional mean and precision matrix for censored observations
+    n1 <- length(ind1)
+    mu_1 <- mu[ind1] -  HI_11 * H_12 %*% (y[ind2] - mu[ind2])  # (n1 x 1)
+    m <- 5  
+    z[ind1] <- rtmvnorm.sparseMatrix(n=1, mean=mu_1, H=H_11, 
+      lower=rep(-Inf, n1), upper=rep(0, n1), burn.in=m, start.value=rep(0, n1))
+    y[ind1] <- z[ind1]
+    
+    #browser()
+    #plot(density(y[ind1]))
+    #lines(density(ysave[ind1]), col="red")
     }
-
+    
     if (i > 0) {
       if (thinning == 1) {
         ind <- i
@@ -299,7 +296,7 @@ sartobit <- function(y, X, W, ndraw=1000, burn.in=100, thinning=1,
   results$nobs  <- n          # number of observations
   results$nvar  <- k          # number of explanatory variables
   results$y     <- y
-  results$zip   <- nobs0      # number of zero values in the y-vector
+  results$zip   <- nobs1      # number of zero values in the y-vector
   results$beta  <- colMeans(B)[1:k]
   results$sige  <- colMeans(B)[k+1]
   results$rho   <- colMeans(B)[k+2]
@@ -375,6 +372,58 @@ else if (c == NULL) {    # case of informative prior rho ~ N(c,T)
 cout <- as.double(detm - epe)
 return(cout)
 }
+
+# summary method for class "sartobit"
+summary.sartobit <- function(object, var_names=NULL, file=NULL, 
+  digits = max(3, getOption("digits")-3), ...){
+  # check for class "sarprobit"
+  if (!inherits(object, "sartobit")) 
+        stop("use only with \"sartobit\" objects")
+        
+  nobs      <- object$nobs
+  nvar      <- object$nvar
+  ndraw     <- object$ndraw
+  nomit     <- object$nomit
+  draws     <- object$B
+  
+  #bayesian estimation
+  bout_mean <- object$coefficients                         #parameter mean column
+  bout_sd   <- apply(draws, 2, sd)                         #parameter sd colum
+  # build bayesian significance levels
+  # for parameter > 0 count all draws > 0  and determine P(X <= 0)
+  # for parameter <= 0 count all draws <0  and determine P(X >= 0)
+  bout_sig <- 1 - apply(draws, 2, function(x) { ifelse (mean(x) > 0, sum(x > 0), sum(x < 0)) }) / ndraw
+  #standard asymptotic measures
+  bout_t    <- bout_mean / bout_sd             #t score b/se
+  bout_tPval<- (1 - pt( abs(bout_t), nobs ))*2 #two tailed test = zero probability = z-prob
+  #name definition
+  if( is.null(var_names)){
+    bout_names<- as.matrix(object$names)
+  }else{
+    bout_names<- as.matrix(var_names)
+  }
+  
+  if(is.null(file)){file <- ""}#output to the console
+  #HEADER
+  write(sprintf("----MCMC spatial autoregressive Tobit model ----"), file, append=T)
+  #sprintf("Dependent Variable")
+  write(sprintf("Execution time  = %6.3f %s", object$time, attr(object$time, "units"))  , file, append=T)
+  write(sprintf("N steps for TMVN= %6d"  , object$nsteps), file, append=T)
+  write(sprintf("N draws         = %6d, N omit (burn-in)= %6d", ndraw, nomit), file, append=T)
+  write(sprintf("N observations  = %6d, K covariates    = %6d", nobs, nvar)  , file, append=T)
+  write(sprintf("# censored values = %6d, # observed values = %6d", object$zip, nobs - object$zip) , file, append=T)
+  write(sprintf("Min rho         = % 6.3f, Max rho         = % 6.3f", object$rmin, object$rmax), file, append=T)
+  write(sprintf("--------------------------------------------------"), file, append=T)
+  write(sprintf(""), file, append=T)
+  #ESTIMATION RESULTS
+  coefficients <- cbind(bout_mean, bout_sd, bout_sig, bout_t, bout_tPval)
+  dimnames(coefficients) <- list(bout_names, 
+        c("Estimate", "Std. Dev", "p-level", "t-value", "Pr(>|z|)"))
+  printCoefmat(coefficients, digits = digits,
+    signif.stars = getOption("show.signif.stars"))      
+  return(invisible(coefficients))
+}
+
 
 # plot MCMC results for class "semprobit" (draft version);
 # diagnostic plots for results (trace plots, ACF, posterior density function)
