@@ -1,0 +1,427 @@
+if (FALSE) {
+ source("stats_distributions.r")
+ source("rtnorm.R")
+}
+
+
+#Bayesian estimates of the spatial autoregressive tobit model
+#          y = rho*W*y + XB + e, e = N(0,sige*Omega), Omega = inv[(I_n-rho*W)'*(I_n -rho*W)]
+#          y is a nx1 vector of either 0 or > 0
+#          B = N(c,T),
+#          1/sige = Gamma(nu,d0),
+#          rho = beta(a1,a2) prior
+#
+# Code based on James P. LeSage method sart_g.m; ported to R by Stefan Wilhelm
+#
+# --------------------------------------------------------------
+# REFERENCES: LeSage and Pace (2009)
+# Introduction to Spatial Econometrics, Chapter 10.
+#----------------------------------------------------------------
+#
+# @param y
+# @param X
+# @param W spatial weight matrix
+# @param ndraw number of MCMC iterations
+# @param burn.in  number of MCMC burn-in to be discarded
+# @param thinning MCMC thinning factor, defaults to 1
+# @param m number of burn.in sampling in inner Gibbs sampling
+# @param prior list of prior settings:
+#   prior$rho ~ Beta(a1,a2);
+#   prior$beta ~ N(c, T)
+#   prior$lflag = 0 for full lndet computation (default = 1, fastest)
+#               = 1 for MC approx (fast for large problems)
+#               = 2 for Spline approx (medium speed)
+# @param start
+# @param m
+# @param computeMarginalEffects
+# @param showProgress
+sartobit <- function(y, X, W, ndraw=1000, burn.in=100, thinning=1,
+  prior=list(a1=1, a2=1, c=rep(0, ncol(X)), T=diag(ncol(X))*1e12, lflag = 0),
+  start=list(rho=0.75, beta=rep(0, ncol(X)), sige=1),
+  m=10, computeMarginalEffects=FALSE, showProgress=FALSE){
+
+  #start timer
+  timet <- Sys.time()
+
+  n  <- nrow( X )            # number of observations
+  n1 <- nrow( X )
+  n2 <- nrow( W )
+  k <- ncol( X )             # number of of parameters/exogenous variables
+  I_n <- sparseMatrix(i=1:n, j=1:n, x=1) # sparse identity matrix
+  if (is.null(colnames(X))) colnames(X) <- paste("x",1:k,sep="")
+
+  #validate inputs
+  if( any(y < 0) ){
+    stop('sartobit: not all y-values are greater or equal to 0')
+  }
+  if( n1 != n2 && n1 != n ){
+    stop('sartobit: wrong size of spatial weight matrix W')
+  }
+  # check if we have a constant term in X
+  ind <- match( n, apply(X,2,sum))
+  if( is.na(ind) ){
+    cflag <- 0
+    p     <- k
+  }else if( ind == 1 ){
+    cflag <- 1
+    p     <- k - 1
+  }else{
+    stop('sartobit: intercept term must be in first column of the X-matrix')
+  }
+
+  # MCMC sampling of beta
+  rho  <- start$rho          # start value of row
+  beta <- start$beta         # start value of parameters, prior value, we could also sample from beta ~ N(c, T)
+  sige <- start$sige         # start value for sigma_e
+
+  # conjugate prior beta ~ N(c, T)
+  # parametrize, default to diffuse prior, for beta, e.g. T <- diag(k) * 1e12
+  c <- rep(0, k)             # prior distribution of beta ~ N(c, T) : c = 0
+  if (is.numeric(prior$c) && length(prior$c) == k) {
+    c <- prior$c
+  }
+  if (is.matrix(prior$T) && ncol(prior$T) == k && isSymmetric(prior$T) && det(prior$T) > 0) {
+    T <- prior$T               # prior distribution of beta ~ N(c, T) : T = I_n --> diffuse prior
+  } else {
+    T <- diag(k)*1e12
+  }
+  # prior for sige ~ IG(nu, d0)
+  if (is.numeric(prior$nu)) {
+    nu <- prior$nu
+  } else {
+    nu <- 0
+  }
+  if (is.numeric(prior$d0)) {
+    d0 <- prior$d0
+  } else {
+    d0 <- 0
+  }
+  
+  cc <- 0.1      # tuning factor for Metropolis-Hastings
+  metflag <- 0   # 0 = Grid-based approach, 1 = Metropolis-Hastings
+  nsample <- 5   # steps for updating z-values
+
+  TI <- solve(T)             # T^{-1}
+  TIc <- TI%*%c              # T^{-1}c
+  S <- I_n - rho * W
+  H <- t(S) %*% S            # precision matrix H for beta | rho, z, y
+  QR <- qr(S)                # class "sparseQR"
+  mu <- solve(QR, X %*% beta)
+  
+  rmin       <- -1   # use -1,1 rho interval as default
+  rmax       <-  1
+
+  lflag <- 0
+  if (is.numeric(prior$lflag) && lflag %in% c(0, 1)) lflag <- prior$lflag
+  #lflag=0 --> default to 1997 Pace and Barry grid approach
+  #lflag=1 --> 1999 Pace and Barry MC determinant approx
+  tmp <- sar_lndet(lflag, W, rmin, rmax)
+  detval <- tmp$detval
+
+  # Some precalculated quantities for drawing rho
+  # rho ~ Beta(a1, a2) prior
+  a1         <-  1
+  a2         <-  1
+  if (is.numeric(prior$a1)) a1 <- prior$a1
+  if (is.numeric(prior$a2)) a2 <- prior$a2
+
+  lnbprior <- log(beta_prior(detval[,1],a1,a2))
+  u        <- runif(thinning * ndraw + burn.in)   # u ~ U(0, 1)
+  nrho     <- 2001
+  nmk      <- (n-k)/2
+  detval1  <- detval[,1]  # rho grid values
+  detval2    <- detval[,2]  # log-determinant grid values
+  rho_gridsq <- detval1 * detval1
+  yy       <- (detval1[2:nrho] + detval1[1:(nrho-1)])
+
+  # matrix to store the beta + sige + rho parameters for each iteration/draw
+  B <- matrix(NA, ndraw, k+2)
+
+  # progress bar
+  if (showProgress) {
+    pb <- txtProgressBar(min=0, max=(thinning * ndraw + burn.in), initial=0, style=3)
+  }
+  
+  # immutable matrices
+  tX <- t(X)                       # X'               # k x n
+  xpx  <- t(X) %*% X               # (X'X)            # k x k
+  xpxI <- solve(xpx)               # (X'X)^{-1}       # k x k
+  #xxpxIxp <- X %*% xpxI %*% tX    # X(X'X)^(-1)X'    # n x n (argh!)
+  xxpxI    <- X %*% xpxI           # X(X'X)^(-1)     # n x k (better, compromise)
+
+  # matrices for direct and indirect impacts
+  direct       <- matrix(NA, ndraw,p)    # n x p
+  indirect     <- matrix(NA, ndraw,p)    # n x p
+  total        <- matrix(NA, ndraw,p)    # n x p
+
+  # names of non-constant parameters
+  if(cflag == 0) {
+    namesNonConstantParams <- colnames(X)
+  } else {
+    namesNonConstantParams <- colnames(X)[-1]
+  }
+  colnames(total) <- namesNonConstantParams
+  colnames(direct)   <- namesNonConstantParams
+  colnames(indirect) <- namesNonConstantParams
+  
+  yin <- y    # input values for y
+  ind1 <- which(yin == 0)    # index vector for censored observations y=0
+  nobs0 <- length(ind1)      # number of censored observations
+  ind2 <- which(yin > 0)
+  nobs1 <- length(ind2)
+
+  for (i in (1 - burn.in):(ndraw * thinning)) {
+  
+    # update beta | y, rho, sige
+    AI <- solve(xpx + sige*TI)
+    Sy <- S%*%y
+    b  <- tX%*%Sy + sige*TIc
+    b0 <- AI %*% b
+    beta <- as.double(rmvnorm(n=1, mean=b0, sigma=sige*AI))
+    Xb <- X%*%beta;
+
+    # update sige
+    nu1 <- n + 2*nu
+    e <- (Sy - Xb)              # residuals
+    d1 <- 2*d0 + crossprod(e)
+    chi <- rchisq(n=1,df=nu1)
+    sige <- as.double(d1/chi)
+    
+    # draw rho
+    if (metflag == 1) {
+      # metropolis step to get rho update
+      rhox <- c_sar(rho,y,xb,sige,W,detval1,detval2)
+      accept <- 0
+      rho2 <- rho + cc*rnorm(n=1)
+      while (accept == 0) {
+        if ((rho2 > rmin) & (rho2 < rmax)) {
+         accept <- 1
+        } else {
+         rho2 <- rho + cc*rnorm(n=1)
+        }
+      }
+      rhoy <- c_sar(rho2,y,xb,sige,W,detval1,detval2)
+      ru <- runif(n=1,0,1)
+      if ((rhoy - rhox) > exp(1)) {
+        pp <- 1
+      } else {
+        ratio <- exp(rhoy-rhox)
+        pp <- min(1,ratio)
+      }
+      if (ru < pp) {
+        rho <- rho2
+        acc <- acc + 1
+      }
+      iter <- i + burn.in
+      acc_rate[iter] <- acc/iter;
+      # update cc based on std of rho draws
+      if (acc_rate[iter] < 0.4) {
+       cc <- cc/1.1
+      }
+      if (acc_rate[iter] > 0.6) {
+       cc <- cc*1.1
+      }
+    } # end draw rho Metropolis-Hastings
+    
+    if (metflag == 0) {
+      # when metflag == 0,
+      # we use numerical integration to perform rho-draw
+      xpy  <- tX %*% y            # X'y
+      Wy   <- as.double(W %*% y)  # Wy        # SW: coerce Wz to vector
+      # (from n x 1 sparse matrix! we do not need a sparse matrix here)
+      xpWy <- tX %*% Wy           # X'Wz      # k x 1
+      e0   <-  y - xxpxI %*% xpy  # y  - X(X'X)^-1X' y
+      ed   <- Wy - xxpxI %*% xpWy # Wy - X(X'X)^(-1)X'Wy
+      epe0 <- as.double(crossprod(e0))  # slightly faster than t(e0) %*% e0
+      eped <- as.double(crossprod(ed))
+      epe0d<- as.double(crossprod(ed, e0))
+      rho  <- draw_rho(detval1, detval2, rho_gridsq, yy, epe0, eped, epe0d, rho, nmk=nmk, nrho=2001, lnbprior, u=u[i + burn.in])
+    }
+    
+    # update z-values for all zero-observations
+    z <- rep(0, n)
+
+    # loop over i
+    S <- (I_n - rho*W)
+    mu <- as.double(solve(qr(S), X %*% beta)) # (n x 1)
+
+    tauinv <- (t(S)%*%S)/sige           # H
+    aa <- diag(tauinv)                  # H_{ii}
+    h <- as.double(rep(1,n)/sqrt(aa))   # (n x 1) vector, conditional standard deviation sqrt(H_{ii}^{-1})
+    c <- (-tauinv) / aa                 # (n x n) matrix
+    ctilde <- as.matrix(c - diag(diag(c))) # (n x n) matrix
+    #browser()
+
+    # nsample ist Gibbs sampler iterations (e.g. m=1, m=10); defaults to 5
+    for (initer in 1:nsample) {
+      for (j in ind1) {
+         # for all zero observations (censored observations) y=0
+         aa <- ctilde[j,] %*% z;       # conditional mean
+         muuse <- (-mu[j]-aa)/h[j];    # z-Standardisierung
+         t1 <- rtnorm(mu=0, sd=1, a=muuse, b=Inf)  # draw from univariate truncated normal TN(mu=0, sd=1, a=muuse, b=Inf)
+         z[j] <- aa + h[j]*t1;         # transform back to z_j | z_{-j} ~ TN(mu=aa, var=h[i], a=0, b=Inf)
+      }
+    }
+    y[ind1] <- mu[ind1] + z[ind1]
+    
+    # SW: Wäre es nicht besser, alle y als condition herzunehmen?
+    if (FALSE) {
+      H <-(t(S)%*%S)/sige
+      ym <- mu[ind1] - 1/diag(H)[ind1] * H[ind1,] %*% (y - mu)
+      yvar <- 1/diag(H)[ind1]
+      y[ind1] <- rtnorm(mu=zm[ind], sd=sqrt(yvar[ind]), a=0, b=Inf)
+    }
+
+    if (i > 0) {
+      if (thinning == 1) {
+        ind <- i
+      }
+      else if (i%%thinning == 0) {
+        ind <- i%/%thinning
+      } else {
+        next
+      }
+      B[ind,] <- c(beta, sige, rho)
+    }
+
+    if (showProgress) setTxtProgressBar(pb, i + burn.in) # update progress bar
+  } # end loop
+
+  if (showProgress)  close(pb) #close progress bar
+
+  beta  <- colMeans(B)[1:k]
+  sige  <- colMeans(B)[k+1]
+  rho   <- colMeans(B)[k+2]
+  
+  # result
+  results       <- NULL
+  results$time  <- Sys.time() - timet
+  results$nobs  <- n          # number of observations
+  results$nvar  <- k          # number of explanatory variables
+  results$y     <- y
+  results$zip   <- nobs0      # number of zero values in the y-vector
+  results$beta  <- colMeans(B)[1:k]
+  results$sige  <- colMeans(B)[k+1]
+  results$rho   <- colMeans(B)[k+2]
+  results$coefficients <- colMeans(B)
+  results$fitted.values <- fitted.values
+  #results$fitted.reponse <- fitted.reponse  # fitted values on reponse scale (binary y variable)
+  results$ndraw <- ndraw
+  results$nomit <- burn.in
+  results$a1        <- a1
+  results$a2        <- a2
+  results$rmax      <- rmax
+  results$rmin      <- rmin
+  results$tflag     <- 'plevel'
+  results$lflag     <- lflag
+  results$cflag     <- cflag
+  results$lndet     <- detval
+  results$names     <- c(colnames(X), "sige", 'rho')
+  results$B         <- B        # (beta, rho) draws
+  results$bdraw     <- B[,1:k]  # beta draws
+  results$sdraw     <- B[,k+1]  # sige draws
+  results$pdraw     <- B[,k+2]  # rho draws
+  results$total     <- total
+  results$direct    <- direct
+  results$indirect  <- indirect
+  results$W <- W
+  results$X <- X
+
+  class(results)    <- "sartobit"
+  return(results)
+}
+
+# PURPOSE: evaluate the conditional distribution of rho given sige
+#  spatial autoregressive model using sparse matrix algorithms
+# ---------------------------------------------------
+#  USAGE:cout = c_sar(rho,y,x,b,sige,W,detval,p,R)
+#  where:  rho  = spatial autoregressive parameter
+#          y    = dependent variable vector
+#          W    = spatial weight matrix
+#        detval = an (ngrid,2) matrix of values for det(I-rho*W)
+#                 over a grid of rho values
+#                 detval(:,1) = determinant values
+#                 detval(:,2) = associated rho values
+#          sige = sige value
+#          c    = (optional) prior mean for rho
+#          T    = (optional) prior variance for rho
+# ---------------------------------------------------
+#  RETURNS: a conditional used in Metropolis-Hastings sampling
+#  NOTE: called only by sar_g
+#  --------------------------------------------------
+#  SEE ALSO: sar_g, c_far, c_sac, c_sem
+# ---------------------------------------------------
+c_sar <- function(rho,y,xb,sige,W,detval1,detval2,c=NULL,T=NULL) {
+
+i <- findInterval(rho,detval1)
+if (i == 0) index=1
+else index=i
+detm <- detval2[index]
+
+if (is.null(c) && is.null(T)) {        # case of diffuse prior
+ n <- length(y)
+ z <- I_n - rho * W
+ e <- z%*%y - xb
+ epe <- crossprod(e)/(2*sige)
+}
+else if (c == NULL) {    # case of informative prior rho ~ N(c,T)
+ z <- I_n - rho * W
+ e <- z%*% - xb
+ n <- length(y)
+ T <- T*sige
+ z <- (speye(n) - rho*W)*e
+ epe <- ((t(z)%*%z)/2*sige) + 0.5*(((rho-c)^2)/T)
+}
+cout <- as.double(detm - epe)
+return(cout)
+}
+
+# plot MCMC results for class "semprobit" (draft version);
+# diagnostic plots for results (trace plots, ACF, posterior density function)
+# method is very similar to plot.lm()
+#
+# @param x
+# @param which
+# @param ask
+# @param trueparam a vector of "true" parameter values to be marked in posterior density plot
+plot.sartobit <- function(x, which=c(1, 2, 3),
+  ask = prod(par("mfcol")) < length(which) && dev.interactive(), ..., trueparam=NULL) {
+ if (!inherits(x, "sartobit"))
+        stop("use only with \"sartobit\" objects")
+ if (!is.numeric(which) || any(which < 1) || any(which > 3))
+        stop("'which' must be in 1:3")
+
+ names <- x$names
+ B <- x$B
+ k <- ncol(B)
+
+ show <- rep(FALSE, 3)
+ show[which] <- TRUE
+
+ if (ask) {
+   oask <- devAskNewPage(TRUE)
+   on.exit(devAskNewPage(oask))
+ }
+ if (show[1L]) {
+  # trace plots
+  for (i in 1:k) {
+    plot(1:nrow(B), B[,i], type="l", xlab="iteration", ylab=names[i], main=substitute("Trace plot of "*x, list(x=names[i])), ...)
+    if (!is.null(trueparam)) abline(h=trueparam[i], col="red", lty=2)
+  }
+ }
+
+ if (show[2L]) {
+   # ACFs
+   for (i in 1:k) {
+     acf(B[,i], main=substitute("ACF of "*x, list(x=names[i])), ...)
+   }
+ }
+
+ if (show[3L]) {
+   # posterior distribution
+   for (i in 1:k) {
+     plot(density(B[,i]), main=substitute("Posterior distribution of "*x, list(x=names[i])), ...)
+     if (!is.null(trueparam)) abline(v=trueparam[i], col="red", lty=2)
+   }
+ }
+}
