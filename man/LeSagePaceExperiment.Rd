@@ -7,7 +7,7 @@
 }
 \usage{
 LeSagePaceExperiment(n = 400, beta = c(0, 1, -1), rho = 0.75, ndraw = 1000, 
- burn.in = 200, thinning = 1, m = 10, computeMarginalEffects=FALSE, ...)
+ burn.in = 200, thinning = 1, m = 10, computeMarginalEffects=TRUE, ...)
 }
 \arguments{
   \item{n}{sample size}

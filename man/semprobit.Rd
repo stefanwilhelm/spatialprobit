@@ -12,7 +12,7 @@ semprobit(formula, W, data, subset, ...)
 
 sem_probit_mcmc(y, X, W, ndraw = 1000, burn.in = 100, thinning = 1, 
   prior=list(a1=1, a2=1, c=rep(0, ncol(X)), T=diag(ncol(X))*1e12,
-  nu = 0, d0 = 0), 
+  nu = 0, d0 = 0, lflag = 0), 
   start = list(rho = 0.75, beta = rep(0, ncol(X)), sige = 1),
   m=10, showProgress=FALSE)
 }

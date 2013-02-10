@@ -214,6 +214,10 @@ sar_probit_mcmc <- function(y, X, W, ndraw=1000, burn.in=100, thinning=1,
   QR <- qr(S)                # class "sparseQR"
   mu <- solve(QR, X %*% beta)
   
+  # truncation points for z, depend only on y, can be precalculated
+  lower <- ifelse(y > 0, 0,  -Inf)
+  upper <- ifelse(y > 0, Inf,   0)
+  
   rmin       <- -1   # use -1,1 rho interval as default
   rmax       <-  1
   

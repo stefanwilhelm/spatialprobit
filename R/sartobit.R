@@ -191,7 +191,7 @@ sartobit <- function(y, X, W, ndraw=1000, burn.in=100, thinning=1,
     # draw rho
     if (metflag == 1) {
       # metropolis step to get rho update
-      rhox <- c_sar(rho,y,Xb,sige,W,detval1,detval2)
+      rhox <- c_sar(rho,y,Xb,sige,I_n,W,detval1,detval2)
       accept <- 0
       rho2 <- rho + cc*rnorm(n=1)
       while (accept == 0) {
@@ -201,7 +201,7 @@ sartobit <- function(y, X, W, ndraw=1000, burn.in=100, thinning=1,
          rho2 <- rho + cc*rnorm(n=1)
         }
       }
-      rhoy <- c_sar(rho2,y,Xb,sige,W,detval1,detval2)
+      rhoy <- c_sar(rho2,y,Xb,sige,I_n,W,detval1,detval2)
       ru <- runif(n=1,0,1)
       if ((rhoy - rhox) > exp(1)) {
         pp <- 1
@@ -331,7 +331,7 @@ sartobit <- function(y, X, W, ndraw=1000, burn.in=100, thinning=1,
 # PURPOSE: evaluate the conditional distribution of rho given sige
 #  spatial autoregressive model using sparse matrix algorithms
 # ---------------------------------------------------
-#  USAGE:cout = c_sar(rho,y,x,b,sige,W,detval,p,R)
+#  USAGE:cout = c_sar(rho,y,x,b,sige,I_n,W,detval,p,R)
 #  where:  rho  = spatial autoregressive parameter
 #          y    = dependent variable vector
 #          W    = spatial weight matrix
@@ -348,7 +348,7 @@ sartobit <- function(y, X, W, ndraw=1000, burn.in=100, thinning=1,
 #  --------------------------------------------------
 #  SEE ALSO: sar_g, c_far, c_sac, c_sem
 # ---------------------------------------------------
-c_sar <- function(rho,y,xb,sige,W,detval1,detval2,c=NULL,T=NULL) {
+c_sar <- function(rho,y,xb,sige,I_n,W,detval1,detval2,c=NULL,T=NULL) {
 
 i <- findInterval(rho,detval1)
 if (i == 0) index=1
