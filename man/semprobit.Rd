@@ -11,8 +11,9 @@ Bayesian estimation of the probit model with spatial errors (SEM probit model).
 semprobit(formula, W, data, subset, ...)
 
 sem_probit_mcmc(y, X, W, ndraw = 1000, burn.in = 100, thinning = 1, 
-  prior=list(a1=1, a2=1, c=rep(0, ncol(X)), T=diag(ncol(X))*1e12), 
-  start = list(rho = 0.75, beta = rep(0, ncol(X))),
+  prior=list(a1=1, a2=1, c=rep(0, ncol(X)), T=diag(ncol(X))*1e12,
+  nu = 0, d0 = 0), 
+  start = list(rho = 0.75, beta = rep(0, ncol(X)), sige = 1),
   m=10, showProgress=FALSE)
 }
 \arguments{
@@ -68,7 +69,7 @@ Returns a structure of class \code{semprobit}:
 \item{rho }{ posterior mean of rho based on draws }
 \item{bdraw }{ beta draws (ndraw-nomit x nvar) }
 \item{pdraw }{ rho  draws (ndraw-nomit x 1) }
-%\item{sdraw }{ sige draws (ndraw-nomit x 1) }
+\item{sdraw }{ sige draws (ndraw-nomit x 1) }
 \item{total }{ a matrix (ndraw,nvars-1) total x-impacts }
 \item{direct }{ a matrix (ndraw,nvars-1) direct x-impacts }
 \item{indirect }{ a matrix (ndraw,nvars-1) indirect x-impacts }

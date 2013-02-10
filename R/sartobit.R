@@ -425,7 +425,7 @@ summary.sartobit <- function(object, var_names=NULL, file=NULL,
 }
 
 
-# plot MCMC results for class "semprobit" (draft version);
+# plot MCMC results for class "sartobit" (draft version);
 # diagnostic plots for results (trace plots, ACF, posterior density function)
 # method is very similar to plot.lm()
 #

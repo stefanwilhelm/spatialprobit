@@ -46,5 +46,20 @@ res2 <- LeSagePaceExperiment(n=1000, beta=c(0,1,-1), rho=0.75,
 res2$time
 res2$coefficients
 summary(res2)
+
+# LeSage/Pace(2009), Table 10.2, p.291: n=400, m=1
+res400.1 <- LeSagePaceExperiment(n=400, beta=c(0,1,-1), rho=0.75, 
+  ndraw=1000, burn.in=200, thinning=1, m=1)
+summary(res400.1)
+
+# LeSage/Pace(2009), Table 10.2, p.291: n=400, m=2
+res400.2 <- LeSagePaceExperiment(n=400, beta=c(0,1,-1), rho=0.75, 
+  ndraw=1000, burn.in=200, thinning=1, m=2)
+summary(res400.2)
+
+# LeSage/Pace(2009), Table 10.2, p.291: n=400, m=10
+res400.10 <- LeSagePaceExperiment(n=400, beta=c(0,1,-1), rho=0.75, 
+  ndraw=1000, burn.in=200, thinning=1, m=10)
+summary(res400.10)
 }
 }

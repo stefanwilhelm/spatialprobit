@@ -20,6 +20,7 @@ fit <- LeSagePaceExperiment(n=400, beta = c(0,  1, -1), ndraw=1000, burn.in = 20
  computeMarginalEffects = TRUE)
 summary(fit)
 
+# Einfach mal die echten Effekte ausrechnen und vergleichen!!!
 #n=400
 #beta = c(0,  1, -1)
 #rho = 0.75

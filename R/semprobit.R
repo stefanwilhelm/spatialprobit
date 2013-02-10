@@ -211,12 +211,6 @@ sem_probit_mcmc <- function(y, X, W, ndraw=1000, burn.in=100, thinning=1,
     pb <- txtProgressBar(min=0, max=(thinning * ndraw + burn.in), initial=0, style=3)
   }
   
-  # beta draws: Unlike the SAR Probit model, mean and variance of beta ~ N(c, T)
-  # change with every iteration. Hence, we draw betadraw ~ N(0, I)
-  # before running the chain and later just create beta as
-  # beta = c + T^{1/2} %*% betadraws
-  betadraws <- rmvnorm(n=(burn.in + ndraw * thinning), mean=rep(0, k), sigma=diag(k))
-  
   # names of non-constant parameters
   if(cflag == 0) {
     namesNonConstantParams <- colnames(X)
@@ -285,7 +279,7 @@ sem_probit_mcmc <- function(y, X, W, ndraw=1000, burn.in=100, thinning=1,
   z[ind] <- rtnorm(mu=zm[ind], sd=sqrt(zvar[ind]), a=0, b=Inf)
   
   # TODO: check why sampling with rtmvnorm.sparseMatrix does not work. 
-  # Chain is exploding in this case. Conditional variance is different to LeSage code.
+  # Chain is exploding in this case. Conditional variance is different from LeSage code.
   # multivariate truncated normal given beta, rho, sige
   # H <- (1/sige)*t(S)%*%S
   #if (m==1) {

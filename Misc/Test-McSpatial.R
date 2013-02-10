@@ -15,7 +15,7 @@ x <- runif(n,0,10)
 ystar <- as.numeric(solve(diag(n) - rho*wmat)%*%(x + rnorm(n,0,2)))
 y <- ystar>quantile(ystar,.4)
 
-# fit with McSpatial
+# GMM fit with McSpatial
 fit <- spprobit(y~x,  wmat=wmat)
 
 #STANDARD PROBIT ESTIMATES 
@@ -91,4 +91,29 @@ save(fits, file="McSpatial-test-2013-01-25.RData")
 # Es hat m.E. nix mit m=1 oder m=10 oder m=20 zu tun --> das scheint ok zu sein.
 # rho sieht verzerrt aus!
 # TODO: Ziehe aus rho | beta, z, y für bekanntes rho, beta und z
+
+
+################################################################################
+#
+# ML
+#
+################################################################################
+
+# ML fit with McSpatial
+system.time(
+fit2 <- spprobitml(y~x,  wmat=wmat)
+)
+# 12.20 seconds
+
+W <- Matrix(wmat, sparse=TRUE)
+Rprof("sarprobit1.out")
+fit2 <- sarprobit(y ~ x, W=W, m=10, showProgress=FALSE, 
+    start = list(rho = 0.5, beta=c(0, 0)), ndraw=1000, burn.in=200)
+Rprof(NULL)        
+summaryRprof("sarprobit1.out")    
+# Execution time  = 18.081 secs
+
+
+# --> Wahrscheinlich gewinnt McSpatial bei kleinen Samples. Wie sieht es bei
+# z.B. n=2000 aus? McSpatial nutzt nur dense matrix, daher wird es Probleme bekommen.
 

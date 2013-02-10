@@ -11,7 +11,7 @@ Bayesian estimation of the spatial autoregressive probit model (SAR probit model
 sarprobit(formula, W, data, subset, ...)
 
 sar_probit_mcmc(y, X, W, ndraw = 1000, burn.in = 100, thinning = 1, 
-  prior=list(a1=1, a2=1, c=rep(0, ncol(X)), T=diag(ncol(X))*1e12), 
+  prior=list(a1=1, a2=1, c=rep(0, ncol(X)), T=diag(ncol(X))*1e12, lflag = 0), 
   start = list(rho = 0.75, beta = rep(0, ncol(X))),
   m=10, computeMarginalEffects=FALSE, showProgress=FALSE)
 }
