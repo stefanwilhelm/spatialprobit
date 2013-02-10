@@ -171,7 +171,7 @@ sar_probit_mcmc <- function(y, X, W, ndraw=1000, burn.in=100, thinning=1,
   n2 <- nrow( W )
   k <- ncol( X )             # number of of parameters/exogenous variables
   I_n <- sparseMatrix(i=1:n, j=1:n, x=1) # sparse identity matrix
-  
+  if (is.null(colnames(X))) colnames(X) <- paste("x",1:k,sep="")
   
   #validate inputs
   if( length(c(which(y == 0 ),which(y == 1))) != length( y ) ){
@@ -214,13 +214,11 @@ sar_probit_mcmc <- function(y, X, W, ndraw=1000, burn.in=100, thinning=1,
   QR <- qr(S)                # class "sparseQR"
   mu <- solve(QR, X %*% beta)
   
-  # truncation points for z, depend only on y, can be precalculated
-  lower <- ifelse(y > 0, 0,  -Inf)
-  upper <- ifelse(y > 0, Inf,   0)
-  
   rmin       <- -1   # use -1,1 rho interval as default
   rmax       <-  1
   
+  lflag <- 0
+  if (is.numeric(prior$lflag) && lflag %in% c(0, 1)) lflag <- prior$lflag
   #lflag=0 --> default to 1997 Pace and Barry grid approach
   #lflag=1 --> 1999 Pace and Barry MC determinant approx
   tmp <- sar_lndet(lflag, W, rmin, rmax)
