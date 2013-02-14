@@ -8,7 +8,8 @@ Approximation of the log determinant \eqn{\ln{|I_n - \rho W|}}{ln|I_n - rho*W|} 
 }
 
 \description{
-Compute the log determinant \eqn{\ln{|I_n - \rho W|}}{ln|I_n - rho*W|} of a spatial weight matrix W
+Compute the log determinant \eqn{\ln{|I_n - \rho W|}}{ln|I_n - rho*W|} of a 
+spatial weight matrix W
 using either the exact approach, or using some approximations like 
 the Chebyshev log determinant approximation or Pace and Barry approximation.
 }
@@ -25,9 +26,13 @@ lndetChebyshev(W, rmin, rmax)
 }
 
 \details{
+This method will no longer provide its own implementation and 
+will be use the already existing methods in the \link[spdep]{do_ldet}.
+
 \code{ldetflag=0} will compute the exact log-determinant at some gridpoints, whereas
 \code{ldetflag=1} will compute the Chebyshev log-determinant approximation.
-\code{ldetflag=2} will compute the Barry and Pace (1999) Monte Carlo approximation of the log-determinant.
+\code{ldetflag=2} will compute the Barry and Pace (1999) Monte Carlo approximation 
+of the log-determinant.
 
 \bold{Exact log-determinant:}\cr
 The exact log determinant \eqn{\ln|I_n - \rho W|}{ln|I_n - rho W|} 
@@ -38,9 +43,7 @@ are then approximated by a spline function.
 This option provides the Chebyshev log-determinant approximation as proposed 
 by Pace and LeSage (2004). The implementation is faster than the full 
 log-determinant method.
-
-Imaginary Buffer Line
-
+}
 
 \value{
 \item{detval}{a 2-column \code{Matrix} with gridpoints for rho from \code{rmin},\ldots,\code{rmax} and corresponding log-determinant}
