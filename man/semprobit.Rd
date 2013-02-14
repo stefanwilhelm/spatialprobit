@@ -39,24 +39,24 @@ sem_probit_mcmc(y, X, W, ndraw = 1000, burn.in = 100, thinning = 1,
 Bayesian estimates of the probit model with spatial errors (SEM probit model)
 \deqn{
   z = X \beta + u, \\
-  u = \rho*W*u + \epsilon, \epsilon \sim N(0, I_n)
+  u = \rho W u + \epsilon, \epsilon \sim N(0, \sigma^2_{\epsilon} I_n)
 }{
   z = X*beta + u, \\
-  u = rho*W*u + e, e ~ N(0,I_n)
+  u = rho*W*u + e, e ~ N(0,sige * I_n)
 }
 which leads to the data-generating process
 \deqn{
-  z = X \beta + (I_n - \rho W) \epsilon
+  z = X \beta + (I_n - \rho W)^{-1} \epsilon
 }{
-  z = X beta + (I_n - rho W) e
+  z = X beta + (I_n - rho W)^{-1} e
 }    
-where y is a binary 0,1 \eqn{(n \times 1)}{(n x 1)} vector of observations for z < 0 and z >= 0. 
+where y is a binary 0,1 \eqn{(n \times 1)}{(n x 1)} vector of observations for \eqn{z < 0} and \eqn{z \ge 0}{z >= 0}. 
 \eqn{\beta}{beta} is a \eqn{(k \times 1)}{(k x 1)} 
 vector of parameters associated with the \eqn{(n \times k)}{(n x k)} data matrix X.
-The error variance \eqn{\sigma_e}{sigma_e} is set to 1 for identification.
 
 The prior distributions are 
- \eqn{\beta \sim N(c,T)}{beta ~ N(c,T)} 
+ \eqn{\beta \sim N(c,T)}{beta ~ N(c,T)},
+ \eqn{\sigma^2_{\epsilon} \sim IG(a1, a2)}, 
  and  
  \eqn{\rho \sim Uni(rmin,rmax)}{rho ~ Uni(rmin,rmax)} 
  or 
@@ -109,7 +109,6 @@ LeSage, J. and Pace, R. K. (2009), \emph{Introduction to Spatial Econometrics}, 
 
 \author{
 adapted to and optimized for R by Stefan Wilhelm <wilhelm@financial.com> 
-and Miguel Godinho de Matos <miguelgodinhomatos@cmu.edu>
 based on code from James P. LeSage}
 
 \seealso{
@@ -124,6 +123,7 @@ n <- 200
 
 # true parameters
 beta <- c(0, 1, -1)
+sige <- 2
 rho <- 0.75
 
 # design matrix with two standard normal variates as "covariates"
@@ -140,16 +140,16 @@ W <- sparseMatrix(i=rep(1:n, each=m),
   j=replicate(n, sample(x=1:n, size=m, replace=FALSE)), x=1/m, dims=c(n, n))
 
 # innovations
-eps <- rnorm(n=n, mean=0, sd=1)
+eps <- sqrt(sige)*rnorm(n=n, mean=0, sd=1)
 
 # generate data from model 
 S <- I_n - rho * W
-z <- solve(qr(S), X \%*\% beta + eps)
-y <- as.vector(z >= 0)  # 0 or 1, FALSE or TRUE
+z <- X \%*\% beta + solve(qr(S), eps)
+y <- as.double(z >= 0)  # 0 or 1, FALSE or TRUE
 
-# estimate SAR probit model
-sarprobit.fit1 <- sar_probit_mcmc(y, X, W, ndraw=500, burn.in=100, 
+# estimate SEM probit model
+semprobit.fit1 <- semprobit(y ~ X - 1, W, ndraw=500, burn.in=100, 
   thinning=1, prior=NULL)
-summary(sarprobit.fit1)
+summary(semprobit.fit1)
 }
 }
