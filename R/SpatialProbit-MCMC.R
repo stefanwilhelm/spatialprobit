@@ -124,9 +124,10 @@ sarprobit <- function(formula, W, data, subset, ...) {
 # @param prior list of prior settings: 
 #   prior$rho ~ Beta(a1,a2); 
 #   prior$beta ~ N(c, T)
-#   prior$lflag = 0 for full lndet computation (default = 1, fastest)
-#               = 1 for MC approx (fast for large problems)
-#               = 2 for Spline approx (medium speed)
+#   prior$lflag   
+# lflag=0 --> default to 1997 Pace and Barry grid approach
+# lflag=1 --> Pace and LeSage (2004) Chebyshev approximation
+# lflag=2 --> Barry and Pace (1999) MC determinant approx
 # @param start
 # @param m
 # @param computeMarginalEffects
@@ -195,9 +196,10 @@ sar_probit_mcmc <- function(y, X, W, ndraw=1000, burn.in=100, thinning=1,
   rmax       <-  1
   
   lflag <- 0
-  if (is.numeric(prior$lflag) && lflag %in% c(0, 1)) lflag <- prior$lflag
+  if (is.numeric(prior$lflag) && lflag %in% c(0, 1, 2)) lflag <- prior$lflag
   #lflag=0 --> default to 1997 Pace and Barry grid approach
-  #lflag=1 --> 1999 Pace and Barry MC determinant approx
+  #lflag=1 --> Pace and LeSage (2004) Chebyshev approximation
+  #lflag=2 --> Barry and Pace (1999) MC determinant approx
   tmp <- sar_lndet(lflag, W, rmin, rmax)
   detval <- tmp$detval
   
@@ -229,7 +231,6 @@ sar_probit_mcmc <- function(y, X, W, ndraw=1000, burn.in=100, thinning=1,
   tX <- t(X)                       # X'               # k x n
   xpx  <- t(X) %*% X               # (X'X)            # k x k
   xpxI <- solve(xpx)               # (X'X)^{-1}       # k x k
-  #xxpxIxp <- X %*% xpxI %*% tX    # X(X'X)^(-1)X'    # n x n (argh!)
   xxpxI    <- X %*% xpxI           # X(X'X)^(-1)     # n x k (better, compromise)
   AA       <- solve(xpx + Tinv)    # (X'X + T^{-1})^{-1}
   
@@ -337,7 +338,7 @@ sar_probit_mcmc <- function(y, X, W, ndraw=1000, burn.in=100, thinning=1,
       # beff is parameter vector without constant!
       # See LeSage (2009), section 5.6.2., p.149/150 for spatial effects estimation in MCMC
       #   direct: M_r(D) = n^{-1} tr(S_r(W))           # SW: efficient approaches available, see chapter 4, pp.114/115
-      #    total: M_r(T) = n^{-1} 1'_n S_r(W) 1_n      # SW: Problem: 1'_n S_r(W) 1_n is dense can be solved via QR decomposition of S
+      #    total: M_r(T) = n^{-1} 1'_n S_r(W) 1_n      # SW: Problem: S_r(W) is dense, but can be solved via QR decomposition of S
       # indirect: M_r(I) = M_r(T) - M_r(D)
       # SW: See LeSage (2009), section 10.1.6, p.293 for Marginal effects in SAR probit
       pdfz <- dnorm(as.numeric(mu))                     # standard normal pdf phi(mu)
@@ -489,8 +490,8 @@ marginal.effects.sarprobit <- function(object, o=100, ...) {
     
   # See LeSage (2009), section 5.6.2., p.149/150 for spatial effects estimation in MCMC
   #   direct: M_r(D) = n^{-1} tr(S_r(W))           # efficient approaches available, see LeSage (2009), chapter 4, pp.114/115
-  #    total: M_r(T) = n^{-1} 1'_n S_r(W) 1_n      # Problem: 1'_n S_r(W) 1_n is dense n x n matrix!
-  # indirect: M_r(I) = M_r(T) - M_r(D)             # Problem: Computation of dense n x n matrix M_r(T) for total effects required!
+  #    total: M_r(T) = n^{-1} 1'_n S_r(W) 1_n      # S_r(W) is dense n x n matrix!
+  # indirect: M_r(I) = M_r(T) - M_r(D)             # Computation of dense n x n matrix M_r(T) for total effects required!
   # See LeSage (2009), section 10.1.6, p.293 for Marginal effects in SAR probit
   pdfz <- dnorm(as.numeric(mu))                     # standard normal pdf phi(mu) = phi( (In -  rho W)^{-1} X beta )  # (n x 1)
   dd   <- sparseMatrix(i=1:nobs, j=1:nobs, x=pdfz)  # dd is diagonal matrix with pdfz as diagonal (n x n)
