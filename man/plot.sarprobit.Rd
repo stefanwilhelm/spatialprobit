@@ -1,8 +1,9 @@
 \name{plot.sarprobit}
 \alias{plot.sarprobit}
 \alias{plot.semprobit}
+\alias{plot.sartobit}
 \title{
-Plot Diagnostics for \code{sarprobit} or \code{semprobit} objects
+Plot Diagnostics for \code{sarprobit}, \code{semprobit} or \code{sartobit} objects
 }
 \description{
 Three plots (selectable by which) are currently available:
@@ -16,6 +17,12 @@ ask = prod(par("mfcol")) < length(which) && dev.interactive(),
 trueparam = NULL)
 
 \method{plot}{semprobit}(x, 
+which = c(1, 2, 3), 
+ask = prod(par("mfcol")) < length(which) && dev.interactive(),
+...,
+trueparam = NULL)
+
+\method{plot}{sartobit}(x, 
 which = c(1, 2, 3), 
 ask = prod(par("mfcol")) < length(which) && dev.interactive(),
 ...,
