@@ -1,21 +1,31 @@
 \name{marginal.effects.sarprobit}
 \alias{marginal.effects}
 \alias{marginal.effects.sarprobit}
+\alias{impacts.sarprobit}
 \title{Compute marginal effects for the SAR probit model}
 \description{
-Estimate marginal effects (average direct, indirect and total impact)
+Estimate marginal effects (average direct, indirect and total impacts)
 for the SAR probit model.
 }
 \usage{
 \method{marginal.effects}{sarprobit}(object, o = 100, ...)
+\method{impacts}{sarprobit}(obj, file=NULL, 
+  digits = max(3, getOption("digits")-3), ...)
 }
 
 \arguments{
   \item{object}{Estimated SAR probit model of class \code{sarprobit}}
+  \item{obj}{Estimated SAR probit model of class \code{sarprobit}}
   \item{o}{maximum value for the power \eqn{tr(W^i), i=1,...,o} to be estimated}
+  \item{digits}{number of digits for printing}
+  \item{file}{Output to file or console}
   \item{...}{additional parameters}
 }
 \details{
+\code{impacts()} will extract and print the marginal effects from a fitted model,
+while \code{marginal.effects(x)} will estimate the marginal effects anew for a fitted
+model.
+
 In spatial models, a change in some explanatory variable \eqn{x_{ir}} for observation \eqn{i} 
 will not only affect the observations \eqn{y_i} directly (direct impact), 
 but also affect neighboring observations \eqn{y_j} (indirect impact). 
@@ -57,8 +67,16 @@ impacts is the mean of the row (column) sums.
 
 For the average direct impacts \eqn{M_r(D)}, 
 there are efficient approaches available, see LeSage (2009), chapter 4, pp.114/115.
-The computation of the average total effects \eqn{M_r(T)} and hence also the average indirect effects \eqn{M_r(I)}
-are more problematic, as \eqn{1'_n S_r(W) 1_n} is a dense \eqn{n \times n}{n x n} matrix.
+
+The computation of the average total effects \eqn{M_r(T)} and hence 
+also the average indirect effects \eqn{M_r(I)} are more subtle, 
+as \eqn{S_r(W)} is a dense \eqn{n \times n}{n x n} matrix.
+In the LeSage Spatial Econometrics Toolbox for MATLAB (March 2010), 
+the implementation in \code{sarp_g} computes the matrix inverse of \eqn{S=I_n -  \rho W}
+which all the negative consequences for large n.
+We implemented \eqn{n^{-1} 1'_n S_r(W) 1_n} via a QR decomposition of 
+\eqn{S=I_n -  \rho W} (already available from a previous step) and solving a linear equation, 
+which is less costly and will work better for large $n$.
 }
 
 \section{Warning}{

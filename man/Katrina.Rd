@@ -78,15 +78,15 @@ So this is not a bug, its a feature.
 }
 
 \source{
-The raw data were obtained from the Royal Statistical Society dataset website
+The raw data was obtained from the Royal Statistical Society dataset website
 \url{http://www.blackwellpublishing.com/rss/Volumes/Av174p4.htm}
 and brought to RData format.
 }
 
 \references{
-J. P. LeSage, R. K. Pace, N. Lam, R. Campanella and X. Liu:
+J. P. LeSage, R. K. Pace, N. Lam, R. Campanella and X. Liu  (2011),
 New Orleans business recovery in the aftermath of Hurricane Katrina
-Journal of the Royal Statistical Society A, 174 (2011), 1007--1027
+\emph{Journal of the Royal Statistical Society A}, \bold{174}, 1007--1027
 }
 
 \examples{
@@ -115,7 +115,7 @@ summary(fit1)
   
 # (b) 0-6 months time horizon
 # LeSage et al. (2011) use k=15 nearest neighbors
-nb <- knn2nb(knearneigh(cbind(Katrina$latt, Katrina$long), k=15))
+nb <- knn2nb(knearneigh(cbind(Katrina$lat, Katrina$long), k=15))
 listw <- nb2listw(nb, style="W")
 W2 <- as(as_dgRMatrix_listw(listw), "CsparseMatrix")
 
@@ -132,7 +132,19 @@ fit3 <- sarprobit(y3 ~ flood_depth + log_medinc + small_size + large_size +
   low_status_customers + high_status_customers + 
   owntype_sole_proprietor + owntype_national_chain, 
   W=W3, data=Katrina, ndraw=600, burn.in = 100, showProgress=TRUE)
-summary(fit3)  
+summary(fit3)
+
+# replicate LeSage et al. (2011), Table 4, p.1018
+# SAR probit model effects estimates for the 0–3-month time horizon
+impacts(fit1)  
+
+# replicate LeSage et al. (2011), Table 5, p.1019
+# SAR probit model effects estimates for the 0–6-month time horizon
+impacts(fit2)
+
+# replicate LeSage et al. (2011), Table 6, p.1020
+# SAR probit model effects estimates for the 0–12-month time horizon
+impacts(fit3)
 }
 }
 \keyword{datasets}

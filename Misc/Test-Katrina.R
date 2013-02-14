@@ -16,12 +16,6 @@ fit1 <- sarprobit(y1 ~ flood_depth + log_medinc + small_size + large_size +
   W=W1, data=Katrina, ndraw=600, burn.in = 100, showProgress=TRUE)
 summary(fit1)
 
-fit1 <- spprobit(y1 ~ flood_depth + log_medinc + small_size + large_size +
-  low_status_customers +  high_status_customers +
-  owntype_sole_proprietor + owntype_national_chain,
-  W=W1, data=Katrina, ndraw=600, burn.in = 100, showProgress=TRUE)
-
-
 # compute marginal effects
 # LeSage et al. (2011), Table 4, p.1018
 Rprof("mfx.out")
@@ -29,6 +23,9 @@ mfx <- marginal.effects(fit1)
 Rprof(NULL)
 summaryRprof("mfx.out")
 # dauert nur noch 5 Sekunden! Yes!
+
+# print impacts
+impacts(fit1)
 
 # (a) Direct effects
 cbind(
