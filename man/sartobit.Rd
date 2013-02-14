@@ -113,4 +113,52 @@ based on Matlab code from James P. LeSage}
 }
 
 \examples{
+\dontrun{
+# Example from LeSage/Pace (2009), section 10.3.1, p. 302-304
+# Value of "a" is not stated in book! 
+# Assuming a=-1 which gives approx. 50% censoring
+ library(spatialprobit)
+
+a <- -1   # control degree of censored observation
+n <- 1000
+rho <- 0.7
+beta <- c(0, 2)
+sige <- 0.5
+I_n <- sparseMatrix(i=1:n, j=1:n, x=1)
+x <- runif(n, a, 1)
+X <- cbind(1, x)
+eps <- rnorm(n, sd=sqrt(sige))
+param <- c(beta, sige, rho)
+
+# random locational coordinates and 6 nearest neighbors
+lat <- rnorm(n)
+long <- rnorm(n)
+W <- kNearestNeighbors(lat, long, k=6)
+
+y <- as.double(solve(I_n - rho * W) %*% (X %*% beta + eps))
+table(y > 0)
+
+# full information
+yfull <- y
+
+# set negative values to zero to reflect sample truncation
+ind <- which(y <=0)
+y[ind] <- 0
+
+# Fit SAR (with complete information)
+fit_sar <- sartobit(yfull ~ X-1, W,ndraw=1000,burn.in=200, showProgress=FALSE)
+summary(fit_sar)
+
+# Fit SAR Tobit (with approx. 50% censored observations)
+fit_sartobit <- sartobit(y ~ x,W,ndraw=1000,burn.in=200, showProgress=TRUE)
+
+par(mfrow=c(2,2))
+for (i in 1:4) {
+ ylim1 <- range(fit_sar$B[,i], fit_sartobit$B[,i])
+ plot(fit_sar$B[,i], type="l", ylim=ylim1, main=fit_sartobit$names[i], col="red")
+ lines(fit_sartobit$B[,i], col="green")
+ legend("topleft", legend=c("SAR", "SAR Tobit"), col=c("red", "green"), 
+   lty=1, bty="n")
+}
+}
 }
