@@ -140,15 +140,15 @@ fit3 <- sarprobit(y3 ~ flood_depth + log_medinc + small_size + large_size +
 summary(fit3)
 
 # replicate LeSage et al. (2011), Table 4, p.1018
-# SAR probit model effects estimates for the 0–3-month time horizon
+# SAR probit model effects estimates for the 0-3-month time horizon
 impacts(fit1)  
 
 # replicate LeSage et al. (2011), Table 5, p.1019
-# SAR probit model effects estimates for the 0–6-month time horizon
+# SAR probit model effects estimates for the 0-6-month time horizon
 impacts(fit2)
 
 # replicate LeSage et al. (2011), Table 6, p.1020
-# SAR probit model effects estimates for the 0–12-month time horizon
+# SAR probit model effects estimates for the 0-12-month time horizon
 impacts(fit3)
 }
 }
