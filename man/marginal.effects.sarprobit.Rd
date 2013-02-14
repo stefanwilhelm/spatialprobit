@@ -1,4 +1,4 @@
-\name{marginal.effects.sarprobit}
+\name{marginal.effects}
 \alias{marginal.effects}
 \alias{marginal.effects.sarprobit}
 \alias{impacts.sarprobit}
@@ -34,7 +34,7 @@ These impacts potentially also include feedback loops from observation
 (see LeSage (2009), section 2.7 for interpreting parameter estimates in spatial models).
 
 For the \eqn{r}-th non-constant explanatory variable, \eqn{S_r(W)} is defined as
-\deqn{S_r(W) = (I_n - \rho W) \beta_r}
+\deqn{S_r(W) = \phi\left((I_n -  \rho W)^{-1} \bar{x}_r \beta_r \right) \odot (I_n -  \rho W)^{-1} I_n \beta_r}
 
 The direct impact of a change in \eqn{x_{ir}} on its 
 own observation \eqn{y_i} can be written as
@@ -76,7 +76,7 @@ the implementation in \code{sarp_g} computes the matrix inverse of \eqn{S=I_n - 
 which all the negative consequences for large n.
 We implemented \eqn{n^{-1} 1'_n S_r(W) 1_n} via a QR decomposition of 
 \eqn{S=I_n -  \rho W} (already available from a previous step) and solving a linear equation, 
-which is less costly and will work better for large $n$.
+which is less costly and will work better for large \eqn{n}.
 }
 
 \section{Warning}{
@@ -92,7 +92,7 @@ so different calls to this method will produce different estimates.
 LeSage, J. and Pace, R. K. (2009), \emph{Introduction to Spatial Econometrics}, CRC Press 
 }
 \author{
-Miguel Godinho de Matos <miguelgodinhomatos@cmu.edu>, Stefan Wilhelm <wilhelm@financial.com>
+Stefan Wilhelm <wilhelm@financial.com>
 }
 
 \examples{
