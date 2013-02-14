@@ -5,6 +5,30 @@ if (FALSE) {
 
 }
 
+# create a generic method
+#sartobit <- function (y, ...)
+# UseMethod("sartobit")
+ 
+# Bayesian estimation of the SAR Tobit model
+#
+sartobit <- function(formula, W, data, ...) {
+  cl <- match.call()                     # cl ist object of class "call"
+  mf <- match.call(expand.dots = FALSE)  # mf ist object of class "call"
+  m  <- match(c("formula", "data"), names(mf), 0L)        # m is index vector
+  mf <- mf[c(1L, m)]
+  mf$drop.unused.levels <- TRUE
+  mf[[1L]] <- as.name("model.frame")
+  mf <- eval(mf, parent.frame())         # from here mf is a data.frame
+  mt <- attr(mf, "terms")                # mt is object of class "terms" and "formula"
+  y <- model.response(mf, "numeric")
+  if (!is.null(W) && !is.numeric(W) && !inherits(W, "sparseMatrix") && nrow(W) != NROW(y)) 
+    stop(gettextf("'W' must be a numeric square matrix, dimension %d should equal %d (number of observations)",
+      NROW(W), NROW(y)), domain = NA)
+  
+  X <- model.matrix(mt, mf, contrasts)
+  sar_tobit_mcmc(y, X, W, ...)    
+} 
+
 #Bayesian estimates of the spatial autoregressive tobit model
 #          y = rho*W*y + XB + e, e = N(0,sige*Omega), Omega = inv[(I_n-rho*W)'*(I_n -rho*W)]
 #          y is a nx1 vector of either 0 or > 0
@@ -30,13 +54,13 @@ if (FALSE) {
 #   prior$rho ~ Beta(a1,a2);
 #   prior$beta ~ N(c, T)
 #   prior$lflag = 0 for full lndet computation (default = 1, fastest)
-#               = 1 for MC approx (fast for large problems)
-#               = 2 for Spline approx (medium speed)
+#               = 1 for Chebyshev approx
+#               = 2 for MC approx (fast for large problems)
 # @param start
 # @param m
 # @param computeMarginalEffects
 # @param showProgress
-sartobit <- function(y, X, W, ndraw=1000, burn.in=100, thinning=1,
+sar_tobit_mcmc <- function(y, X, W, ndraw=1000, burn.in=100, thinning=1,
   prior=list(a1=1, a2=1, c=rep(0, ncol(X)), T=diag(ncol(X))*1e12, lflag = 0),
   start=list(rho=0.75, beta=rep(0, ncol(X)), sige=1),
   m=10, computeMarginalEffects=FALSE, showProgress=FALSE){
@@ -116,7 +140,8 @@ sartobit <- function(y, X, W, ndraw=1000, burn.in=100, thinning=1,
   lflag <- 0
   if (is.numeric(prior$lflag) && lflag %in% c(0, 1)) lflag <- prior$lflag
   #lflag=0 --> default to 1997 Pace and Barry grid approach
-  #lflag=1 --> 1999 Pace and Barry MC determinant approx
+  #lflag=1 --> 2004 Pace and LeSage Chebyshev approx
+  #lflag=2 --> 1999 Pace and Barry MC determinant approx
   tmp <- sar_lndet(lflag, W, rmin, rmax)
   detval <- tmp$detval
 
@@ -372,6 +397,19 @@ else if (c == NULL) {    # case of informative prior rho ~ N(c,T)
 cout <- as.double(detm - epe)
 return(cout)
 }
+
+# extract the coefficients
+coef.sartobit <- function(object, ...) {
+ if (!inherits(object, "sartobit")) 
+        stop("use only with \"sartobit\" objects")
+ return(object$coefficients)
+}
+
+# extract the coefficients
+coefficients.sartobit <- function(object, ...) {
+ UseMethod("coef", object)
+}
+
 
 # summary method for class "sartobit"
 summary.sartobit <- function(object, var_names=NULL, file=NULL, 
