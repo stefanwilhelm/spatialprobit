@@ -115,6 +115,8 @@ sar_lndet <- function(ldetflag,W,rmin,rmax){
   }else if( ldetflag == 1 ) { 
     t0   <- Sys.time()
     tmp  <- lndetChebyshev(W,rmin,rmax)
+  }else if( ldetflag == 2 ) {
+  
   }else{
     # use Pace and Barry, 1999 MC approximation
     # use Pace and Barry, 1998 spline interpolation
@@ -131,6 +133,194 @@ sar_lndet <- function(ldetflag,W,rmin,rmax){
   results$time  <- Sys.time() - t0
   return( results )
 }
+
+sar_lndet2 <- function(ldetflag,W,rmin,rmax){
+  results       <- NULL
+  env <- new.env(parent=globalenv())
+  listw <- mat2listw(W)
+  assign("n", nrow(W), envir=env)
+  assign("listw", listw, envir=env)
+  assign("family", "SAR", envir=env)
+  assign("similar", FALSE, envir=env)
+
+  # do lndet approximation calculations if needed
+  if( ldetflag == 0 ){ # no approximation
+    t0            <- Sys.time()
+    SE_classic_setup(env)
+    results$detval  <- get("detval1", env)
+  }else if( ldetflag == 1 ) { 
+    t0   <- Sys.time()
+    #tmp  <- lndetChebyshev(W,rmin,rmax)
+    cheb_setup(env, q=4)  # Chebychev approximation, q = 4
+    
+    # SW: Muss ich eigentlich das feine Grid mit do_ldet ausrechnen?
+    # Für Chebyshev-Approximation ja
+    detval1 <- seq(rmin, rmax, 0.001)
+    detval2 <- sapply(detval1, do_ldet, env)
+    results$detval  <- cbind(detval1, detval2)
+  } else if( ldetflag == 2 ) {
+    t0   <- Sys.time()
+    mcdet_setup(env, p=16, m=30, which=1)
+    detval1 <- seq(rmin, rmax, 0.001)
+    detval2 <- sapply(detval1, do_ldet, env)
+    results$detval  <- cbind(detval1, detval2)
+  }
+  results$time   <- Sys.time() - t0
+  return( results )
+ }
+ 
+ if (FALSE) {
+  library(spatialprobit)
+  library(spdep)
+  d <- 10
+  m <- 3
+  W <- sparseMatrix(i=rep(1:d, each=m),
+    j=replicate(d, sample(x=1:d, size=m, replace=FALSE)), x=1/m, dims=c(d, d))
+    
+  env <- new.env(parent=globalenv())
+  listw <- mat2listw(W)
+  assign("n", nrow(W), envir=env)
+  assign("listw", listw, envir=env)
+  assign("family", "SAR", envir=env)
+  assign("similar", FALSE, envir=env)
+  system.time(
+   SE_classic_setup(env)     # 1.26 Sekunden geht im wesentlichen für die Berechnung des Grids drauf
+  )
+  ls(env)                # Was ist alles in der environment drin? detval1 mit komplettem Grid (2000 Gridpunkte
+  do_ldet(0.555, env)
+  do_ldet(0.5558, env)   # wird wegen 0.001 grid auf 0.555 abgerundet
+  do_ldet(0.5559, env)   # wird wegen 0.001 grid auf 0.555 abgerundet
+  do_ldet(0.556, env)
+  
+  env <- new.env(parent=globalenv())
+  listw <- mat2listw(W)
+  assign("n", nrow(W), envir=env)
+  assign("listw", listw, envir=env)
+  assign("family", "SAR", envir=env)
+  assign("similar", FALSE, envir=env)
+
+  cheb_setup(env, q=4)
+  ls(env)
+  do_ldet(0.555, env)
+  do_ldet(0.5558, env)
+  do_ldet(0.5559, env)
+  do_ldet(0.556, env)
+  # get("detval1", env)
+  #--> Chebyshev-Approximation liefert nicht das Grid! Muss man selber berechnen
+
+#>   do_ldet(0.555, env)
+#[1] -0.7010543
+#>   do_ldet(0.5558, env)
+#[1] -0.7010543
+#>   do_ldet(0.5559, env)
+#[1] -0.7010543
+#>   do_ldet(0.556, env)
+#[1] -0.7032971
+#  
+#>   do_ldet(0.555, env)
+#[1] -0.3024082
+#>   do_ldet(0.5558, env)
+#[1] -0.3035415
+#>   do_ldet(0.5559, env)
+#[1] -0.3036834
+#>   do_ldet(0.556, env)
+#[1] -0.3038254
+
+  ##############################################################################
+  #  
+  # Pace and Barry (1997) Grid-based approach  
+  #
+  ##############################################################################
+
+  system.time(
+    ldet0a <- sar_lndet(ldetflag=0, W, rmin=-1, rmax=1)
+  )
+  #   user  system elapsed 
+  #   1.34    0.01    1.36
+  
+  system.time(
+    ldet0b <- sar_lndet2(ldetflag=0, W, rmin=-1, rmax=0.999)
+  )
+  #   user  system elapsed 
+  #   1.27    0.00    1.26    etwas schneller
+  
+  # Problem: Für die numerische Integration in draw_rho() brauchen wir
+  # das komplette (feine;0.001) Grid. Also muss ich das komplette Grid berechnen
+  # do_ldet(-1, env) knallt mit Fehler weg "index out of bounds"
+  # Wie kann man das verhindern?
+  # A: SE_classic_setup() berechnet bereits das komplette Grid als detval1
+  system.time(
+   SE_classic_setup(env)     # 1.26 Sekunden geht im wesentlichen für die Berechnung des Grids drauf
+  )
+  get("detval1", env) # liefert das komplette Grid!!!
+  
+  plot(ldet0a$detval[,1], ldet0a$detval[,2], type="l", main="Pace and Barry (1997) grid-based approach", ylim=c(-10,1))
+  lines(ldet0b$detval[,1], ldet0b$detval[,2], col="red")
+  legend("bottomleft", legend=c("my code", "spdep"), col=c("black", "red"), lty=1, bty="n")
+  # --> passt
+  
+  ##############################################################################
+  #  
+  # Pace and Barry (1998) Monte Carlo  
+  #
+  ##############################################################################
+  
+  env <- new.env(parent=globalenv())
+  listw <- mat2listw(W)
+  assign("n", nrow(W), envir=env)
+  assign("listw", listw, envir=env)
+  assign("family", "SAR", envir=env)
+  assign("similar", FALSE, envir=env)
+  
+  system.time(
+    mcdet_setup(env, p=16, m=30, which=1)
+  )
+  #   user  system elapsed 
+  #   0.03    0.00    0.03
+  ls(env)
+
+  system.time(
+    ldet2b <- sar_lndet2(ldetflag=2, W, rmin=-1, rmax=0.999)
+  )
+  #   user  system elapsed 
+  #   0.81    0.00    0.86
+  plot(ldet2b$detval[,1], ldet2b$detval[,2], type="l", main="Pace and Barry (1998) Monte Carlo", xlab=expression(rho), ylab=expression("ln|I_n - rho * W|"))
+  lines(ldet0b$detval[,1], ldet0b$detval[,2], col="red")  # Pace and Barry (1997) Grid
+  lines(ldet1b$detval[,1], ldet1b$detval[,2], col="green")  # LeSage and Pace (2004) Chebyshev approximation
+  legend("bottomleft", legend=c(
+    "spdep: Pace and Barry (1998) MC", 
+    "spdep: Pace and Barry (1997) Grid",
+    "spdep: LeSage and Pace (2004) Chebyshev"), col=c("black", "red", "green"), lty=1, bty="n")
+  ##############################################################################
+  #
+  # LeSage and Pace (2004) Chebyshev approximation of log determinant
+  #
+  ##############################################################################
+  system.time(
+    ldet1a <- sar_lndet(ldetflag=1, W, rmin=-1, rmax=1)
+  )
+  #   user  system elapsed 
+  #   0.11    0.00    0.11
+  i <- findInterval(0.555, ldet1a$detval[,1])
+  ldet1a$detval[i,2]
+  # -0.3393549
+  
+  Rprof("chebyshev-spdep.out")
+  system.time(
+    ldet1b <- sar_lndet2(ldetflag=1, W, rmin=-1, rmax=1)
+  )
+  Rprof(NULL)
+  summaryRprof("chebyshev-spdep.out")
+  #   user  system elapsed 
+  #   1.02    0.00    1.02
+  # --> Hier braucht do_ldet länger, weil ich das Grid ausrechnen muss
+  
+  plot(ldet1a$detval[,1], ldet1a$detval[,2], type="l", main="LeSage and Pace (2004) Chebyshev Approximation")
+  lines(ldet1b$detval[,1], ldet1b$detval[,2], col="red")
+  legend("bottomleft", legend=c("my code", "spdep"), col=c("black", "red"), lty=1, bty="n")
+  # --> starke Abweichungen
+ }
+
 
 # PURPOSE: computes Pace and Barry's grid for log det(I-rho*W) using sparse matrices
 # -----------------------------------------------------------------------

@@ -27,6 +27,7 @@ lndetChebyshev(W, rmin, rmax)
 \details{
 \code{ldetflag=0} will compute the exact log-determinant at some gridpoints, whereas
 \code{ldetflag=1} will compute the Chebyshev log-determinant approximation.
+\code{ldetflag=2} will compute the Barry and Pace (1999) Monte Carlo approximation of the log-determinant.
 
 \bold{Exact log-determinant:}\cr
 The exact log determinant \eqn{\ln|I_n - \rho W|}{ln|I_n - rho W|} 
@@ -38,19 +39,24 @@ This option provides the Chebyshev log-determinant approximation as proposed
 by Pace and LeSage (2004). The implementation is faster than the full 
 log-determinant method.
 
-\bold{Pace and Barry approximation:}\cr
-To be implemented.
-}
+Imaginary Buffer Line
+
 
 \value{
 \item{detval}{a 2-column \code{Matrix} with gridpoints for rho from \code{rmin},\ldots,\code{rmax} and corresponding log-determinant}
 \item{time}{execution time}
 }
 
+\seealso{
+ \link[spdep]{do_ldet} for computation of log-determinants
+}
+
 \references{
 Pace, R. K. and Barry, R. (1997), Quick Computation of Spatial Autoregressive Estimators, \emph{Geographical Analysis}, \bold{29}, 232--247
 
-LeSage, J. and Pace, R. K. (2004), Chebyshev Approximation of log-determinants of spatial weight matrices, \emph{Computational Statistics and Data Analysis}, \bold{45}, 179--196.
+R. Barry and R. K. Pace (1999) A Monte Carlo Estimator of the Log Determinant of Large Sparse Matrices, \emph{Linear Algebra and its Applications}, \bold{289}, 41--54.
+
+Pace, R. K. and LeSage, J. (2004), Chebyshev Approximation of log-determinants of spatial weight matrices, \emph{Computational Statistics and Data Analysis}, \bold{45}, 179--196.
 
 LeSage, J. and Pace, R. K. (2009), \emph{Introduction to Spatial Econometrics}, CRC Press, chapter 4 
 }

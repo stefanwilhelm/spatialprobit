@@ -18,33 +18,6 @@ if (FALSE) {
  source("utility_functions.r") 
 }
 
-# spdep::knearneigh  - k nearest neighbours for spatial weights
-# build spatial weight matrix W based on the k nearest neighbors (kNN) (default: k=6)
-#
-# @param X point coordinates (x, y)
-# @param m number of neighbors
-# @return sparse matrix (n x n) with nearest neigbors
-kNearestNeighbors <- function(x, y, k=6) {
-  # number of observations
-  n <- length(x)
-  
-  # spatial weight matrix W based on the k= nearest neighbors
-  D <- matrix(NA, n, k)  # (n x k) index matrix to the 6 nearest neigbhors from point i
-  for (i in 1:n) {
-    px <- x[i]
-    py <- y[i]
-    # euclidean dist from all points to p
-    d <- sqrt((x - px)^2 + (y - py)^2)
-    
-    # determine the m nearest neighbors (rank 1 is the point itself, ranks 2..(m+1) are the m nearest neighbors
-    # TODO: if 2 points have the same distance, e.g. ranks=1, 2, 2.5, 2.5 are odd
-    D[i, ] <- which(rank(d) %in% 2:(k+1))
-  }
-  # sparse matrix representation for spatial weight matrix W
-  W <- sparseMatrix(i = rep(1:n, k), j=as.vector(D), x=1/k)
-  return(W)
-}
-
 # estimated tr(W^i) for i=1,...,100
 # see LeSage (2009), chapter 4, p.97/98
 #
@@ -161,7 +134,7 @@ sarprobit <- function(formula, W, data, subset, ...) {
 sar_probit_mcmc <- function(y, X, W, ndraw=1000, burn.in=100, thinning=1, 
   prior=list(a1=1, a2=1, c=rep(0, ncol(X)), T=diag(ncol(X))*1e12, lflag = 0), 
   start=list(rho=0.75, beta=rep(0, ncol(X))),
-  m=10, computeMarginalEffects=FALSE, showProgress=FALSE){  
+  m=10, computeMarginalEffects=TRUE, showProgress=FALSE){  
 
   #start timer
   timet <- Sys.time()
@@ -623,6 +596,48 @@ summary.sarprobit <- function(object, var_names=NULL, file=NULL,
     #cat(paste(strwrap(x, width = getOption("width")), collapse = "\\\n"), "\n")
   #}
   return(invisible(coefficients))
+}
+
+# prints the marginal effects/impacts of the SAR probit fit
+impacts.sarprobit <- function(obj, file=NULL, 
+  digits = max(3, getOption("digits")-3), ...) {
+  if (!inherits(obj, "sarprobit")) 
+    stop("use only with \"sarprobit\" objects")
+    
+  if(is.null(file)){file <- ""}#output to the console
+  write(sprintf("--------Marginal Effects--------"), file, append=T)  
+  write(sprintf(""), file, append=T)      
+  
+  #(a) Direct effects
+  write(sprintf("(a) Direct effects"), file, append=T)
+  direct <- cbind(
+   lower_005=apply(obj$direct, 2, quantile, prob=0.05),
+   posterior_mean=colMeans(obj$direct),
+   upper_095=apply(obj$direct, 2, quantile, prob=0.95)
+  )
+  printCoefmat(direct, digits = digits)
+  
+  # (b) Indirect effects
+  write(sprintf(""), file, append=T)      
+  write(sprintf("(b) Indirect effects"), file, append=T)
+  indirect <- cbind(
+   lower_005=apply(obj$indirect, 2, quantile, prob=0.05),
+   posterior_mean=colMeans(obj$indirect),
+   upper_095=apply(obj$indirect, 2, quantile, prob=0.95)
+  )
+  printCoefmat(indirect, digits = digits)
+  
+  # (c) Total effects
+  write(sprintf(""), file, append=T)      
+  write(sprintf("(c) Total effects"), file, append=T)
+  total <- cbind(
+   lower_005=apply(obj$total, 2, quantile, prob=0.05),
+   posterior_mean=colMeans(obj$total),
+   upper_095=apply(obj$total, 2, quantile, prob=0.95)
+  )
+  printCoefmat(total, digits = digits)
+  
+  return(invisible(list(direct=direct, indirect=indirect, total=total)))
 }
 
 # c.sarprobit works in the same way as boot:::c.boot().

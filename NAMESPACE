@@ -1,6 +1,8 @@
 import(stats)
 import(tmvtnorm)
 import(Matrix)
+import(spdep)
+
 export(sar_eigs)
 export(sar_lndet)
 export(lndetfull)
@@ -17,10 +19,17 @@ export(summary.sarprobit)
 export(c.sarprobit)
 export(marginal.effects)
 export(marginal.effects.sarprobit)
-#export(predict.sarprobit)
-#export(residuals.sarprobit)
-#export(fitted.sarprobit)
-#export(fitted.values.sarprobit)
+export(impacts.sarprobit)
+
+# SAR Tobit
+export(sartobit)
+export(sar_tobit_mcmc)
+export(coefficients.sartobit)
+export(coef.sartobit)
+export(plot.sartobit)
+export(summary.sartobit)
+#export(sartobit.default)
+#export(sartobit.formula)
 
 # SEM probit
 export(semprobit)
@@ -36,6 +45,7 @@ export(LeSagePaceExperiment)
 ## loaded but not currently attached.
 S3method(plot, sarprobit)
 S3method(marginal.effects, sarprobit)
+S3method(impacts, sarprobit)
 #S3method(fitted, sarprobit)
 #S3method(predict, sarprobit)
 #S3method(residuals, sarprobit)

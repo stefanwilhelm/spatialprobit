@@ -1,10 +1,16 @@
 User visible changes in spatialprobit package
 
-changes in spatialprobit 0.9-5 (2013-12-09)
-# Bayesian estimation of the SEM probit model
-# Use of deprecated {as.,is.,}real() functions replaced by {as.,is.,}double()
-# Added LeSagePaceExperiment() function for replication of LeSage and Pace (2009), section 10.1.5
+changes in spatialprobit 0.9-6 (2013-02-15)
+# Added Bayesian estimation of the spatial error probit model (SEM probit; semprobit())
+# Added Bayesian estimation of the spatial autoregressive Tobit model (SAR Tobit; sartobit())
+# Added LeSagePaceExperiment() function for replication of tables in LeSage and Pace (2009), section 10.1.5
 # Added documentation for CKM data set (Coles, Katz, Mendelsohn)
+# Added Katrina data set used in LeSage et al. (2011)
+# Optimized calculation of tr(W^i) in tracesWi() with significant speed-up
+# Better integration with package spdep: use computation methods for log-determinants ln|I_n - rho W| from package spdep too
+# Optimized calculation of the average total effects using the QR-decomposition of S=(I_n - rho W)
+# Added impacts() function for printing the average total, average direct and average indirect effects
+# Use of deprecated {as.,is.,}real() functions replaced by {as.,is.,}double()
 
 changes in spatialprobit 0.9-3 (2012-07-05)
 # data set CKM "Innovation among physicians" added (Coles, Katz, Mendelsohn)

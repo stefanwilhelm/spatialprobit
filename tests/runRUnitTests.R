@@ -1,19 +1,8 @@
 library(RUnit)
 library(spatialprobit)
 
-# command line arguments
-Args <- commandArgs()
-
-# working directory
-wd=Args[5]
-if (is.null(wd) | is.na(wd)) wd="."
-setwd(wd)
-
-setwd("F:/R/spatialprobit")
-library(spatialprobit)
-
 # Define Test Suite for package "tmvtnorm"
-testsuite.spatialprobit <- defineTestSuite("spatialprobit", dirs="tests", testFileRegexp = "^test.+\\.R")
+testsuite.spatialprobit <- defineTestSuite("spatialprobit", dirs=".", testFileRegexp = "^test.+\\.R")
 
 # Run Test suite
 testResult <- runTestSuite(testsuite.spatialprobit)

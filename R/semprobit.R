@@ -224,6 +224,9 @@ sem_probit_mcmc <- function(y, X, W, ndraw=1000, burn.in=100, thinning=1,
   ones <- rep(1, n)
   W2diag <- diag(t(W)%*%W)
   
+  ind0 <- which(y == 0)      # 0 obs.
+  ind1 <- which(y == 1)      # 1 obs.
+  
   for (i in (1 - burn.in):(ndraw * thinning)) {
     
   # update beta given rho, z  
@@ -272,23 +275,24 @@ sem_probit_mcmc <- function(y, X, W, ndraw=1000, burn.in=100, thinning=1,
   Cz <- zmu - zvar*B2
   zm <- mu + Cz;                # mu + (z-mu) - zvar * t(S)[ (1/sige) * S * (z - mu) ]
   
-  ind <- which(y == 0)
-  z[ind] <- rtnorm(mu=zm[ind], sd=sqrt(zvar[ind]), a=-Inf, b=0)
-            
-  ind <- which(y == 1)
-  z[ind] <- rtnorm(mu=zm[ind], sd=sqrt(zvar[ind]), a=0, b=Inf)
+  z[ind0] <- rtnorm(mu=zm[ind0], sd=sqrt(zvar[ind0]), a=-Inf, b=0)
+  z[ind1] <- rtnorm(mu=zm[ind1], sd=sqrt(zvar[ind1]), a=0, b=Inf)
+  z[is.infinite(z)] <- 0
   
   # TODO: check why sampling with rtmvnorm.sparseMatrix does not work. 
   # Chain is exploding in this case. Conditional variance is different from LeSage code.
   # multivariate truncated normal given beta, rho, sige
-  # H <- (1/sige)*t(S)%*%S
-  #if (m==1) {
-  # z <- as.double(rtmvnorm.sparseMatrix(n=1, mean=mu, H=H, 
-  #      lower=lower, upper=upper, burn.in=m, start.value=z))
-  #} else {
-  # z <- as.double(rtmvnorm.sparseMatrix(n=1, mean=mu, H=H, 
-  #   lower=lower, upper=upper, burn.in=m))
-  #}
+  if (FALSE) {
+  H <- (1/sige)*t(S)%*%S
+  m <- 1
+  if (m==1) {
+   z2 <- as.double(rtmvnorm.sparseMatrix(n=1, mean=mu, H=H, 
+        lower=lower, upper=upper, burn.in=m, start.value=z))
+  } else {
+   z2 <- as.double(rtmvnorm.sparseMatrix(n=1, mean=mu, H=H, 
+     lower=lower, upper=upper, burn.in=m))
+  }
+  }
       
   # 3. sample from rho | beta, z, sige using Metropolis-Hastings with burn.in=20
   # update rho using metropolis-hastings
@@ -351,7 +355,7 @@ sem_probit_mcmc <- function(y, X, W, ndraw=1000, burn.in=100, thinning=1,
   }
     
   if (showProgress)  close(pb) #close progress bar
-  
+    
   # fitted values for estimates (based on z rather than binary y like in fitted(glm.fit))
   # (on reponse scale y vs. linear predictor scale z...)
   beta  <- colMeans(B)[1:k]
