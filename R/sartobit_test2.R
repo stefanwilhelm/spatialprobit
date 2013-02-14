@@ -24,9 +24,9 @@ eps <- rnorm(n, sd=sqrt(sige))
 param <- c(beta, sige, rho)
 
 # random locational coordinates and 6 nearest neighbors
-latt <- rnorm(n)
+lat <- rnorm(n)
 long <- rnorm(n)
-W <- kNearestNeighbors(latt, long, k=6)
+W <- kNearestNeighbors(lat, long, k=6)
 
 y <- as.double(solve(I_n - rho * W) %*% (X %*% beta + eps))
 table(y > 0)
@@ -40,7 +40,7 @@ y[ind] <- 0
 
 # Fit SAR (with complete information) as double check if beta, sige and rho are estimated correctly
 Rprof("sar.out")
-fit_sar <- sartobit(ysave,X,W,ndraw=1000,burn.in=200, showProgress=FALSE)
+fit_sar <- sartobit(ysave ~ X-1, W,ndraw=1000,burn.in=200, showProgress=FALSE)
 Rprof(NULL)
 summaryRprof("sar.out")
 # 3 Sekunden
@@ -68,19 +68,11 @@ plot(fit_sar, which=c(1, 2, 3), trueparam=param)
 
 # SAR Tobit
 Rprof("sartobit.out")
-fit_sart <- sartobit(y,X,W,ndraw=1000,burn.in=200, showProgress=TRUE)
+fit_sartobit <- sartobit(y ~ x,W,ndraw=1000,burn.in=200, showProgress=TRUE)
 Rprof(NULL)
 summaryRprof("sartobit.out")
-summary(fit_sart)
+summary(fit_sartobit)
 # 19 Sekunden mit Progressbar; 15.574 Sekunden ohne
-
-Rprof("sartobit.out")
-fit_sart <- sartobit(y,X,W,ndraw=1000,burn.in=200, showProgress=FALSE)
-Rprof(NULL)
-summaryRprof("sartobit.out")
-summary(fit_sart)
-
-
 
 #----MCMC spatial autoregressive Tobit model ----
 #Execution time  = 16.549 secs
@@ -100,7 +92,22 @@ summary(fit_sart)
 #Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
 
 par(mfrow=c(3, 4))
-plot(fit_sart, which=c(1, 2, 3), trueparam=param)
+plot(fit_sartobit, which=c(1, 2, 3), trueparam=param)
+
+
+par(mfrow=c(2,2))
+ylim1 <- range(fit_sar$B[,1], fit_sartobit$B[,1])
+plot(fit_sar$B[,1], type="l", ylim=ylim1, col="red")
+lines(fit_sartobit$B[,1], col="green")
+
+ylim2 <- range(fit_sar$B[,2], fit_sartobit$B[,2])
+plot(fit_sar$B[,2], type="l", ylim=ylim2, col="red")
+lines(fit_sartobit$B[,2], col="green")
+
+ylim3 <- range(fit_sar$B[,3], fit_sartobit$B[,3])
+plot(fit_sar$B[,3], type="l", ylim=ylim3, col="red")
+lines(fit_sartobit$B[,3], col="green")
+
 
 
 
