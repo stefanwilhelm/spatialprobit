@@ -97,6 +97,11 @@ table(y2) # 425 of the 673 firms reopened during 0-6 months horizon, p.1016
 table(y3) # 478 of the 673 firms reopened during 0-12 months horizon, p.1016
 detach(Katrina)
 
+# plot observations in New Orleans map
+if (require(ggmap)) {
+  qmplot(long, lat, data = Katrina, maptype="roadmap", source="google")
+}
+
 \dontrun{
 # replicate LeSage et al. (2011), Table 3, p.1017
 require(spdep)
