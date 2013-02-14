@@ -1,8 +1,14 @@
 library(spatialprobit)
 library(McSpatial)
+library(ggmap)
+require(spdep)
+
+# load data set
 data(Katrina)
 
-require(spdep)
+# plot data set
+qmplot(long, lat, data = Katrina)
+qmplot(long, lat, data = Katrina, maptype="roadmap", source="google")
 
 # (a) 0-3 months time horizon
 # LeSage et al. (2011) use k=11 nearest neighbors in this case
