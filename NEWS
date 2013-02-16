@@ -1,5 +1,8 @@
 User visible changes in spatialprobit package
 
+changes in spatialprobit 0.9-7 (2013-02-15)
+# Bugfix in number of rho gridpoints (do_ldet() gives 2000 gridpoints instead of 2001).
+
 changes in spatialprobit 0.9-6 (2013-02-15)
 # Added Bayesian estimation of the spatial error probit model (SEM probit; semprobit())
 # Added Bayesian estimation of the spatial autoregressive Tobit model (SAR Tobit; sartobit())

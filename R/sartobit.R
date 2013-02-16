@@ -154,7 +154,7 @@ sar_tobit_mcmc <- function(y, X, W, ndraw=1000, burn.in=100, thinning=1,
 
   lnbprior <- log(beta_prior(detval[,1],a1,a2))
   u        <- runif(thinning * ndraw + burn.in)   # u ~ U(0, 1)
-  nrho     <- 2001
+  nrho     <- nrow(detval)
   nmk      <- (n-k)/2
   detval1  <- detval[,1]  # rho grid values
   detval2    <- detval[,2]  # log-determinant grid values
@@ -261,7 +261,7 @@ sar_tobit_mcmc <- function(y, X, W, ndraw=1000, burn.in=100, thinning=1,
       epe0 <- as.double(crossprod(e0))  # slightly faster than t(e0) %*% e0
       eped <- as.double(crossprod(ed))
       epe0d<- as.double(crossprod(ed, e0))
-      rho  <- draw_rho(detval1, detval2, rho_gridsq, yy, epe0, eped, epe0d, rho, nmk=nmk, nrho=2001, lnbprior, u=u[i + burn.in])
+      rho  <- draw_rho(detval1, detval2, rho_gridsq, yy, epe0, eped, epe0d, rho, nmk=nmk, nrho=nrho, lnbprior, u=u[i + burn.in])
     }
     
     if (nobs1 > 0) {

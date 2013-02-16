@@ -193,7 +193,7 @@ sem_probit_mcmc <- function(y, X, W, ndraw=1000, burn.in=100, thinning=1,
   if(is.numeric(prior$a2)) a2 <- prior$a2
   
   u        <- runif(thinning * ndraw + burn.in)   # u ~ U(0, 1)
-  nrho     <- 2001
+  nrho     <- nrow(detval)
   nmk      <- (n-k)/2
   detval1  <- detval[,1]  # SW: avoid multiple accesses to detval[,1]
   detval2  <- detval[,2]

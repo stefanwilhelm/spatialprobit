@@ -1,6 +1,6 @@
 Package: spatialprobit
-Version: 0.9-6
-Date: 2013-02-15
+Version: 0.9-7
+Date: 2013-02-16
 Title: Spatial Probit Models
 Author: Stefan Wilhelm <wilhelm@financial.com> and Miguel Godinho de Matos <miguelgodinhomatos@cmu.edu>
 Maintainer: Stefan Wilhelm <wilhelm@financial.com>

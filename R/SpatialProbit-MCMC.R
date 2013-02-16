@@ -212,7 +212,7 @@ sar_probit_mcmc <- function(y, X, W, ndraw=1000, burn.in=100, thinning=1,
   
   lnbprior <- log(beta_prior(detval[,1],a1,a2))
   u        <- runif(thinning * ndraw + burn.in)   # u ~ U(0, 1)
-  nrho     <- 2001
+  nrho     <- nrow(detval)  # do_ldet() liefert nur 2000 statt 2001 Gridpoints
   nmk      <- (n-k)/2
   rho_grid   <- detval[,1]  # rho grid values
   lndet    <- detval[,2]  # log-determinant grid values
@@ -298,7 +298,7 @@ sar_probit_mcmc <- function(y, X, W, ndraw=1000, burn.in=100, thinning=1,
   epe0 <- as.double(crossprod(e0))  # slightly faster than t(e0) %*% e0
   eped <- as.double(crossprod(ed))
   epe0d<- as.double(crossprod(ed, e0))
-  rho  <- draw_rho(rho_grid, lndet, rho_gridsq, yy, epe0, eped, epe0d, rho, nmk=nmk, nrho=2001, lnbprior, u=u[i + burn.in])
+  rho  <- draw_rho(rho_grid, lndet, rho_gridsq, yy, epe0, eped, epe0d, rho, nmk=nmk, nrho=nrho, lnbprior, u=u[i + burn.in])
   
   ############################################################################## 
   

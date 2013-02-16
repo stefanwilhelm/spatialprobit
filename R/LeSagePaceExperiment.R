@@ -8,7 +8,7 @@ LeSagePaceExperiment <- function(n=400, beta=c(0,  1, -1), rho=0.75, ndraw=1000,
   X <- cbind(intercept=1, x=rnorm(n), y=rnorm(n))
   
   # identity matrix I_n
-  I_n <- Diagonal(n)
+  I_n <- sparseMatrix(i=1:n, j=1:n, x=1)
     
   # build spatial weight matrix W from random coordinates
   W <- kNearestNeighbors(x=rnorm(n), y=rnorm(n), k=6)
