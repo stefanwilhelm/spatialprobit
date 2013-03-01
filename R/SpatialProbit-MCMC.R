@@ -110,6 +110,15 @@ sarprobit <- function(formula, W, data, subset, ...) {
   sar_probit_mcmc(y, X, W, ...)    
 }
 
+# @param S template matrix of (I - rho * W)
+# @param ind indizes to replaced
+# @param W spatial weights matrix W
+# @return (I - rho * W)
+update_I_rW <- function(S, ind, rho, W) {
+  S@x[ind] <- (-rho*W)@x
+  return(S)
+}
+
 # Estimate the spatial autoregressive probit model (SAR probit)
 # z = rho * W * z + X \beta + epsilon
 # where y = 1 if z >= 0 and y = 0 if z < 0 observable
@@ -183,7 +192,18 @@ sar_probit_mcmc <- function(y, X, W, ndraw=1000, burn.in=100, thinning=1,
   }
   
   Tinv <- solve(T)           # T^{-1}
-  S <- I_n - rho * W
+  
+  # prepare computation of (I_n - rho * W)
+  if (class(W) == "dgCMatrix") {
+   I <- sparseMatrix(i=1:n,j=1:n,x=Inf)
+   S <- (I - rho * W)
+   ind  <- which(is.infinite(S@x))  # Stellen an denen wir 1 einsetzen müssen (I_n)
+   ind2 <- which(!is.infinite(S@x))  # Stellen an denen wir -rho*W einsetzen müssen
+   S@x[ind] <- 1
+  } else {
+   S <- I_n - rho * W
+  }
+  
   H <- t(S) %*% S            # precision matrix H for beta | rho, z, y
   QR <- qr(S)                # class "sparseQR"
   mu <- solve(QR, X %*% beta)
@@ -263,6 +283,7 @@ sar_probit_mcmc <- function(y, X, W, ndraw=1000, burn.in=100, thinning=1,
     
   # just to set a start value for z
   z <- rep(0, n)
+  ones <- rep(1, n)
   
   for (i in (1 - burn.in):(ndraw * thinning)) {
   
@@ -305,7 +326,7 @@ sar_probit_mcmc <- function(y, X, W, ndraw=1000, burn.in=100, thinning=1,
   ############################################################################## 
   
   # update S, H and QR decomposition of S and mu after each iteration; before effects
-  S <- I_n - rho * W
+  S <- update_I_rW(S, ind=ind2, rho, W)  # update (I - rho * W)
   H <- t(S) %*% S      # H = S'S 
   QR <- qr(S)          # class "sparseQR"
   
@@ -359,7 +380,7 @@ sar_probit_mcmc <- function(y, X, W, ndraw=1000, burn.in=100, thinning=1,
       # and x is the solution of S %*% x = 1_n, obtained from the QR-decompositon
       # of S. The average total effects is then the mean of (D %*% x) * b[r]
       # average total effects, which can be furthermore done for all b[r] in one operation.
-      avg_total    <- mean(dd %*% qr.coef(QR, rep(1, n))) * beff
+      avg_total    <- mean(dd * qr.coef(QR, ones)) * beff
       avg_indirect <- avg_total - avg_direct    # (p x 1)
       
       total[ind, ]      <- avg_total    # an (ndraw-nomit x p) matrix
