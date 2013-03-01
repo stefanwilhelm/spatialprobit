@@ -231,8 +231,8 @@ sar_probit_mcmc <- function(y, X, W, ndraw=1000, burn.in=100, thinning=1,
   tX <- t(X)                       # X'               # k x n
   xpx  <- t(X) %*% X               # (X'X)            # k x k
   xpxI <- solve(xpx)               # (X'X)^{-1}       # k x k
-  xxpxI    <- X %*% xpxI           # X(X'X)^(-1)     # n x k (better, compromise)
-  AA       <- solve(xpx + Tinv)    # (X'X + T^{-1})^{-1}
+  xxpxI <- X %*% xpxI              # X(X'X)^(-1)     # n x k (better, compromise)
+  AA    <- solve(xpx + Tinv)       # (X'X + T^{-1})^{-1}
   
   # draw from multivariate normal beta ~ N(c, T). we can precalculate 
   # betadraws ~ N(0, T) befor running the chain and later just create beta as
@@ -243,6 +243,7 @@ sar_probit_mcmc <- function(y, X, W, ndraw=1000, burn.in=100, thinning=1,
   direct       <- matrix(NA, ndraw,p)    # n x p
   indirect     <- matrix(NA, ndraw,p)    # n x p
   total        <- matrix(NA, ndraw,p)    # n x p
+  zmean        <- rep(0, n)
     
   # names of non-constant parameters
   if(cflag == 0) {
@@ -279,7 +280,8 @@ sar_probit_mcmc <- function(y, X, W, ndraw=1000, burn.in=100, thinning=1,
   }
     
   # 2. sample from beta | rho, z, y
-  c2 <- AA  %*% (tX %*% S %*% z + Tinv %*% c)
+  Sz <- as.double(S %*% z)               # (n x 1); dense
+  c2 <- AA  %*% (tX %*% Sz + Tinv %*% c) # (n x 1); dense
   T <- AA   # no update basically on T, TODO: check this
   beta <- as.double(c2 + betadraws[i + burn.in, ])
   
@@ -311,8 +313,7 @@ sar_probit_mcmc <- function(y, X, W, ndraw=1000, burn.in=100, thinning=1,
   # (I_n - rho * W) mu = X beta 
   # instead of inverting S = I_n - rho * W as in mu = ( In -  rho W)^{-1} X beta.
   # QR-decomposition for sparse matrices
-  #mu <- solve(QR, X %*% beta)
-  mu <- qr.coef(QR, X %*% beta)
+  mu <- solve(QR, X %*% beta)
 
   if (i > 0) {
     if (thinning == 1) {
@@ -325,6 +326,7 @@ sar_probit_mcmc <- function(y, X, W, ndraw=1000, burn.in=100, thinning=1,
     }
     
     B[ind,] <- c(beta, rho)
+    zmean   <- zmean + z
   
     # compute effects estimates (direct and indirect impacts) in each MCMC iteration
     if (computeMarginalEffects) {
@@ -413,6 +415,7 @@ sar_probit_mcmc <- function(y, X, W, ndraw=1000, burn.in=100, thinning=1,
   results$indirect  <- indirect
   results$W <- W
   results$X <- X
+  #results$mlike     <- mlike    # log-likelihood based on posterior means
 
   #results$predicted <- # prediction required. The default is on the scale of the linear predictors
   class(results)    <- "sarprobit"
@@ -731,8 +734,27 @@ fitted.sarprobit <- function(object, ...) {
 # Extract Log-Likelihood; see logLik.glm() for comparison
 # Method returns object of class "logLik" with at least one attribute "df"
 # giving the number of (estimated) parameters in the model.
+# see Marsh (2000) equation (2.8), p.27 
 logLik.sarprobit <- function(object, ...) {
-
+  X <- object$X
+  y <- object$y
+  n <- nrow(X)
+  k <- ncol(X)
+  W <- object$W
+  beta <- object$beta
+  rho <- object$rho
+  I_n <- sparseMatrix(i=1:n, j=1:n, x=1)
+  S <- I_n - rho * W
+  D <- diag(1/sqrt(diag(S %*% t(S))))  # D = diag(E[u u'])^{1/2}  (n x n)
+  Xs <- D %*% solve(qr(S), X)          # X^{*} = D * (I_n - rho * W)^{-1} * X
+  #Xs <- D %*% solve(S) %*% X
+  F <- pnorm(as.double(Xs %*% beta))    # F(X^{*} beta)  # (n x 1)
+  lnL <- sum(log(F[y == 1])) + sum(log((1 - F[y == 0]))) # see Marsh (2000), equation (2.8)
+  #lnL <- sum(ifelse(y == 1, log(pnorm(xb)), log(1 - pnorm(xb))))
+  out <- lnL
+  class(out) <- "logLik"
+  attr(out,"df") <- k
+ return(out)
 }
 
 

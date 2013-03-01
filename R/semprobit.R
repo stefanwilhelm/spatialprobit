@@ -560,3 +560,28 @@ plot.semprobit <- function(x, which=c(1, 2, 3),
  }
 }
 
+# Extract Log-Likelihood; see logLik.glm() for comparison
+# Method returns object of class "logLik" with at least one attribute "df"
+# giving the number of (estimated) parameters in the model.
+# see Marsh (2000) equation (2.8), p.27 
+logLik.semprobit <- function(object, ...) {
+  X <- object$X
+  y <- object$y
+  n <- nrow(X)
+  k <- ncol(X)
+  W <- object$W
+  beta <- object$beta
+  rho <- object$rho
+  sige <- object$sige
+  I_n <- sparseMatrix(i=1:n, j=1:n, x=1)
+  S <- I_n - rho * W
+  D <- diag(1/sqrt(sige*diag(S %*% t(S))))  # D = diag(E[u u'])^{1/2}  (n x n)
+  Xs <- D %*% X                             # X^{*} = D %*% X
+  F <- pnorm(as.double(Xs %*% beta))        # F(X^{*} beta)  # (n x 1)
+  lnL <- sum(log(F[y == 1])) + sum(log((1 - F[y == 0]))) # see Marsh (2000), equation (2.8)
+  out <- lnL
+  class(out) <- "logLik"
+  attr(out,"df") <- k
+ return(out)
+}
+
