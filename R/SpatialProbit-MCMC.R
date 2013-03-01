@@ -776,7 +776,7 @@ logLik.sarprobit <- function(object, ...) {
   #lnL <- sum(ifelse(y == 1, log(pnorm(xb)), log(1 - pnorm(xb))))
   out <- lnL
   class(out) <- "logLik"
-  attr(out,"df") <- k
+  attr(out,"df") <- k+1                 # k parameters in beta, rho
  return(out)
 }
 

@@ -581,7 +581,7 @@ logLik.semprobit <- function(object, ...) {
   lnL <- sum(log(F[y == 1])) + sum(log((1 - F[y == 0]))) # see Marsh (2000), equation (2.8)
   out <- lnL
   class(out) <- "logLik"
-  attr(out,"df") <- k
+  attr(out,"df") <- k+2                     # k parameters in beta, rho, sige
  return(out)
 }
 
