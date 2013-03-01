@@ -77,13 +77,38 @@ summary(probit.fit1)
 mfx1 <- mfxboot(y ~ x1 + x2, data=df, dist="probit", boot=1000)
 mfx1
 
+#   marginal.effect standard.error z.ratio
+#x1           0.271          0.025  10.949
+#x2          -0.194          0.025  -7.902
+
 # estimate SAR probit model
 set.seed(12345)
-sarprobit.fit1 <- sar_probit_mcmc(y, X, W, ndraw=1000, burn.in=50,
+sarprobit.fit1 <- sar_probit_mcmc(y, X, W, ndraw=1000, burn.in=200,
   thinning=1, prior=NULL, computeMarginalEffects=TRUE, showProgress=TRUE)
   
 summary(sarprobit.fit1)
 impacts(sarprobit.fit1)
+
+#--------Marginal Effects--------
+#
+#(a) Direct effects
+#   lower_005 posterior_mean upper_095
+#x1    0.2436         0.2689     0.293
+#x2   -0.2257        -0.1861    -0.147
+#
+#(b) Indirect effects
+#   lower_005 posterior_mean upper_095
+#x1   0.04402        0.40840     1.217
+#x2  -0.80859       -0.28204    -0.030
+#
+#(c) Total effects
+#   lower_005 posterior_mean upper_095
+#x1    0.3178         0.6773     1.460
+#x2   -0.9850        -0.4682    -0.214
+
+# --> direct effects are very similar to normal probit model
+# x1:   0.271 vs.  0.2689
+# x2:  -0.194 vs. -0.1861
 
 set.seed(12345)
 mfx <- marginal.effects(sarprobit.fit1)
@@ -108,23 +133,20 @@ rbind(
 )
 
 # 95% confidence interval based on quantiles
-apply(me$direct, 2, quantile, prob=c(0.025, 0.975))
+apply(mfx$direct, 2, quantile, prob=c(0.025, 0.975))
 
 sarprobit.fit2 <- sarprobit(y ~ x1 + x2, W, data=df, ndraw=1000, burn.in=50,
   thinning=1, prior=NULL, computeMarginalEffects=TRUE, showProgress=TRUE)
-  
 
 
-
-
-plot(density(me$direct[,1]))
-lines(density(me2$direct[,1]), col="blue")
+plot(density(mfx$direct[,1]))
+lines(density(mfx$direct[,1]), col="blue")
 lines(density(sarprobit.fit1$direct[,1]), col="red")
-plot(me$direct[,1],sarprobit.fit1$direct[,1])
+plot(mfx$direct[,1],sarprobit.fit1$direct[,1])
 abline(a=0, b=1, lty=1, col="red")
 # problem: both should be the same, wrong:
 # tr(W^i) is determined with simulation, so there will be different realisations in sarprobit.fit1
 # and marginal.effects.sarprobit()
-quantile(me$direct[,1], prob=c(0.025, 0.975)) # 95% confidence interval
+quantile(mfx$direct[,1], prob=c(0.025, 0.975)) # 95% confidence interval
 quantile(sarprobit.fit1$direct[,1], prob=c(0.025, 0.975))
 }

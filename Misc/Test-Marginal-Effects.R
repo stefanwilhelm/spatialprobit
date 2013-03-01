@@ -15,16 +15,45 @@ library(spatialprobit)
 #%x2              -0.827782        -0.569489        -0.383547        -6.850810         0.000000
 #
 
-
+set.seed(2)
 fit <- LeSagePaceExperiment(n=400, beta = c(0,  1, -1), ndraw=1000, burn.in = 200, m=1,
  computeMarginalEffects = TRUE)
 summary(fit)
+impacts(fit)
 
-# Einfach mal die echten Effekte ausrechnen und vergleichen!!!
-#n=400
-#beta = c(0,  1, -1)
-#rho = 0.75
-#S = (I_n - rho * W)
+set.seed(2)
+n <- 400
+beta <- c(0,  1, -1)
+rho <- 0.75
+X <- cbind(intercept = 1, x = rnorm(n), y = rnorm(n))
+I_n <- sparseMatrix(i = 1:n, j = 1:n, x = 1)
+W <- kNearestNeighbors(x = rnorm(n), y = rnorm(n), k = 6)
+eps <- rnorm(n = n, mean = 0, sd = 1)
+z <- solve(qr(I_n - rho * W), X %*% beta + eps)
+y <- as.double(z >= 0)
+S <- (I_n - rho * W)
+
+# Theoretische Impacts
+# S_r(W) <- phi(S^(-1) * x_r * beta_r) %*% S^(-1) * I_n * beta_r
+mu <- as.double(solve(qr(S), X %*% beta))
+S_r <- diag(dnorm(mu)) %*% solve(S)
+# Average Direct Impact =  n^(-1) tr(S_r(W)) beta_r
+direct <- mean(diag(S_r)) * beta[-1]   # 0.2086822 -0.2086822
+# Average Total Impact =  n^(-1) 1' S_r(W) 1 beta_r
+total <- mean(rowSums(S_r)) * beta[-1] # 0.7168747 -0.7168747
+
+# Average Indirect Impacts =  Average Total Impact - Average Direct Impact
+indirect <- total - direct
+cbind(direct, indirect, total)
+
+#> cbind(direct, indirect, total)
+#         direct   indirect      total
+#[1,]  0.2086822  0.5081925  0.7168747
+#[2,] -0.2086822 -0.5081925 -0.7168747
+
+
+
+
 
 direct <- cbind(
   lower_01 = apply(fit$direct, 2, quantile, prob=0.01),
@@ -87,6 +116,6 @@ total = cbind(
   mean_sd = apply(mfx$total, 2, mean)/apply(mfx$total, 2, sd)
 );
 
-    lower_01 Coefficient   upper_01   mean_sd
-x  0.4942853   0.7212815  1.0256794  6.293185
-y -1.0006702  -0.7062377 -0.4900613 -6.020970
+#    lower_01 Coefficient   upper_01   mean_sd
+#x  0.4942853   0.7212815  1.0256794  6.293185
+#y -1.0006702  -0.7062377 -0.4900613 -6.020970

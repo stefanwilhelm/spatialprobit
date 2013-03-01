@@ -10,9 +10,6 @@ loglik <- function(params, y, X, W) {
   beta <- params[1:k]
   rho <- params[k+1]
   
-  ind0 <- which(y == 0)
-  ind1 <- which(y == 1)
-  
   S <- I_n - rho * W
   D <- diag(1/sqrt(diag( S %*% t(S))))  # D = diag(E[u u'])^{1/2}  (n x n)
   SI <- solve(S)                        # (I_n - rho * W)^{-1}
@@ -20,7 +17,7 @@ loglik <- function(params, y, X, W) {
   Xs <- D %*% SI %*% X                  # X^{*} = D * (I_n - rho * W)^{-1} * X
   F <- pnorm(as.double(Xs %*% beta))    # F(X^{*} beta)  # (n x 1)
 
-  lnL <- sum(log(F[ind1])) + sum(log((1 - F[ind0]))) # see Marsh (2000), equation (2.8)
+  lnL <- sum(log(F[y == 1])) + sum(log((1 - F[y == 0]))) # see Marsh (2000), equation (2.8)
   return(lnL)
 }
 
