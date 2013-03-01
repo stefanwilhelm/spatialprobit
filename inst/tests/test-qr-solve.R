@@ -29,6 +29,9 @@ test_that("solve(qr(S),b) is faster than qr.solve(S,b) for sparse S", {
   # user  system elapsed
   # 5.36    0.14    5.52
   
-  expect_that(y1, equals(y2))
-  expect_that(time1["elapsed"] < time2["elapsed"] * 0.7)  # expect at least 30% performance gain
+  expect_that(y1, equals(y2))  # expect same results
+  #expect_that(time1["elapsed"] < time2["elapsed"] * 0.7, is_true())  # expect at least 30% performance gain
+  cond <- time1["elapsed"] < (time2["elapsed"] * 0.7)
+  names(cond) <- NULL                                  # problem with named condition
+  expect_true(cond)
 })

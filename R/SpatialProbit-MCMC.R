@@ -110,6 +110,8 @@ sarprobit <- function(formula, W, data, subset, ...) {
   sar_probit_mcmc(y, X, W, ...)    
 }
 
+# faster update of matrix S = (I - rho * W) for new values of rho
+#
 # @param S template matrix of (I - rho * W)
 # @param ind indizes to replaced
 # @param W spatial weights matrix W
