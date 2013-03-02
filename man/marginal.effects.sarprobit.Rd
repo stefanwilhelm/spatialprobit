@@ -96,6 +96,7 @@ Stefan Wilhelm <wilhelm@financial.com>
 }
 
 \examples{
+\dontrun{
 require(spatialprobit)
 
 # number of observations
@@ -128,24 +129,11 @@ y <- as.vector(z >= 0)  # 0 or 1, FALSE or TRUE
 
 # estimate SAR probit model
 set.seed(12345)
-sarprobit.fit1 <- sar_probit_mcmc(y, X, W, ndraw=1000, burn.in=50, 
+sarprobit.fit1 <- sar_probit_mcmc(y, X, W, ndraw=500, burn.in=100, 
   thinning=1, prior=NULL, computeMarginalEffects=TRUE)
 summary(sarprobit.fit1)
 
-# average direct effects
-colMeans(sarprobit.fit1$direct)
-
-me <- marginal.effects(sarprobit.fit1)
-colMeans(me$direct)
-
-plot(density(me$direct[,1]))
-lines(density(sarprobit.fit1$direct[,1]), col="red")
-plot(me$direct[,1],sarprobit.fit1$direct[,1]) 
-abline(a=0, b=1, lty=1, col="red")
-
-# problem: both should be the same, wrong: 
-# tr(W^i) is determined with simulation, so there will be different realisations in sarprobit.fit1
-# and marginal.effects.sarprobit()
-quantile(me$direct[,1], prob=c(0.025, 0.975)) # 95% confidence interval
-quantile(sarprobit.fit1$direct[,1], prob=c(0.025, 0.975))
+# print impacts
+impacts(sarprobit.fit1)
+}
 }
