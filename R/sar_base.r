@@ -1,5 +1,4 @@
 require(Matrix)
-require(akima)         #provides interpolation functions
 
 # PURPOSE: check if a matrix has an intercept in the
 #          first row
@@ -82,56 +81,6 @@ sar_eigs <- function(eflag, W){
     results$rmax <- 1 
     results$time <- Sys.time() - t0 
   }
-  return( results )
-}
-
-#---------------------------------------------------
-# PURPOSE: compute the log determinant |I_n - rho*W|
-# using the user-selected (or default) method
-# ---------------------------------------------------
-# USAGE: detval = sar_lndet(lflag,W,rmin,rmax)
-# where ldetflag,rmin,rmax,W contains input flags 
-# ---------------------------------------------------
-# Written by:
-# James P. LeSage, Dept of Economics
-# University of Toledo
-# 2801 W. Bancroft St,
-# Toledo, OH 43606
-# jpl@jpl.econ.utoledo.edu
-#
-# Adapted to R by:
-# Miguel Godinho de Matos
-# Carnegie Mellon University
-# Dept. Engineering & Public Policy
-sar_lndet_old <- function(ldetflag,W,rmin,rmax){
-  results       <- NULL
-  results$time  <- NULL
-  results$detval<-NULL
-  tmp           <-NULL
-  # do lndet approximation calculations if needed
-  if( ldetflag == 0 ){ # no approximation
-    t0            <- Sys.time()
-    tmp           <- lndetfull(W,rmin,rmax)
-  }else if( ldetflag == 1 ) { 
-    t0   <- Sys.time()
-    tmp  <- lndetChebyshev(W,rmin,rmax)
-  }else if( ldetflag == 2 ) {
-    # use Pace and Barry, 1999 MC approximation
-  
-  }else{
-   
-    # use Pace and Barry, 1998 spline interpolation
-    stop('sar_lndet: method not implemented')
-  }
-  # replace +Inf and -Inf by NA, otherwise spline() function crashes
-  tmp$lndet[is.infinite(tmp$lndet)] <- NA  
-  
-  interpolation <- aspline(x=tmp$rho, y=tmp$lndet, xout=seq(rmin, rmax,0.001))
-  n             <- length( interpolation$x)
-  results$detval<- Matrix(data=0, nrow=n, ncol=2 )
-  results$detval[,1]<-interpolation$x
-  results$detval[,2]<-interpolation$y
-  results$time  <- Sys.time() - t0
   return( results )
 }
 
