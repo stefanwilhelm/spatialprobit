@@ -114,10 +114,11 @@ based on code from James P. LeSage}
 }
 
 \examples{
-\dontrun{
 library(Matrix)
+set.seed(2)
+
 # number of observations
-n <- 200
+n <- 100
 
 # true parameters
 beta <- c(0, 1, -1)
@@ -133,8 +134,14 @@ I_n <- sparseMatrix(i=1:n, j=1:n, x=1)
 m <- 6
 
 # spatial weight matrix with m=6 nearest neighbors
-W <- sparseMatrix(i=rep(1:n, each=m), 
-  j=replicate(n, sample(x=1:n, size=m, replace=FALSE)), x=1/m, dims=c(n, n))
+# W must not have non-zeros in the main diagonal!
+i <- rep(1:n, each=m)
+j <- rep(NA, n * m)
+for (k in 1:n) {
+  j[(((k-1)*m)+1):(k*m)] <- sample(x=(1:n)[-k], size=m, replace=FALSE)
+}
+W <- sparseMatrix(i, j, x=1/m, dims=c(n, n))
+
 
 # innovations
 eps <- rnorm(n=n, mean=0, sd=1)
@@ -145,8 +152,6 @@ z <- solve(qr(S), X \%*\% beta + eps)
 y <- as.vector(z >= 0)  # 0 or 1, FALSE or TRUE
 
 # estimate SAR probit model
-sarprobit.fit1 <- sar_probit_mcmc(y, X, W, ndraw=500, burn.in=100, 
-  thinning=1, prior=NULL)
+sarprobit.fit1 <- sar_probit_mcmc(y, X, W, ndraw=100, thinning=1, prior=NULL)
 summary(sarprobit.fit1)
-}
 }

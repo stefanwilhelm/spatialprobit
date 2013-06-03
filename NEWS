@@ -1,5 +1,8 @@
 User visible changes in spatialprobit package
 
+changes in spatialprobit 0.9-9 (2013-06-03)
+# Added some checks on the input parameters in sarprobit(). Matrix W must not have non-zeros in the main diagonal.
+
 changes in spatialprobit 0.9-8 (2013-03-01)
 # 25% performance optimization in sarprobit()
 # Added logLik() function for sarprobit() and semprobit() fit

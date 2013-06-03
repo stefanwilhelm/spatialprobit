@@ -165,6 +165,10 @@ sar_probit_mcmc <- function(y, X, W, ndraw=1000, burn.in=100, thinning=1,
   if( n1 != n2 && n1 != n ){
     stop('sarprobit: wrong size of spatial weight matrix W')
   }
+  # check if spatial weights matrix W does not contain zeros in the main diagonal
+  if (!inherits(W, "sparseMatrix") || any(diag(W) != 0)) {
+    stop('sarprobit: spatial weights matrix W must be a sparse matrix with zeros in the main diagonal')
+  }
   # check if we have a constant term in X
   ind <- match( n, apply(X,2,sum))
   if( is.na(ind) ){
