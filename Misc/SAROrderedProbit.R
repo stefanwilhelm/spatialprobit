@@ -1,27 +1,30 @@
 # SAR Ordered Probit / Ordered spatial probit model
 #
 # see LeSage (2009), section 10.2
+# see Greene (2003), section 21.8 for non-spatial ordered probit
 #
 # model:
 # (1)  z = rho * W  * z + X beta + eps
-# (2) y_i can take J alternatives for
+# (2) y_i can take J+1 alternatives (0,...,J) for
 #     y_i = j, if phi_{j-1} <= z <= phi_j
+# (3) phi is a vector
 #
-# SAR probit is special case with J=2 and phi=c(-Inf, 0, Inf) is J+1 vector with phi_0 = -Inf and phi_J = +Inf
+# SAR probit is special case with J=1 (2 alternatives) 
+# and phi=c(-Inf, 0, Inf) is J+1 vector with phi[0] = -Inf, phi[1]=0 and phi[J]= +Inf
 # Model paramaters to be estimated:
-# beta, rho and vector phi (J-2 values)
+# beta, rho and vector phi (J-2 values: phi[2],...,phi[J-1])
 
 library(tmvtnorm)
 library(spatialprobit)
 
 ################################################################################
 #
-# Example with J = 3
+# Example with J = 4 alternatives
 #
 ################################################################################
 
 # set up a model like in SAR probit
-J <- 4   # ordered alternatives j=1, 2, 3, 4 --> 2 cutoff-points to be estimated phi_2, phi_3
+J <- 4   # ordered alternatives j=1, 2, 3, 4 --> (J-2)=2 cutoff-points to be estimated phi_2, phi_3
 phi <- c(-Inf, 0,  +1, +2, Inf)    # phi_0,...,phi_j, vector of length (J+1)
 # phi_1 = 0 is a identification restriction
 
@@ -49,7 +52,7 @@ z   <- solve(qr(I_n - rho * W), X %*% beta + eps)
 # y_i = 3 for phi_2 < z <= phi_3
 # y_i = 3 for phi_3 < z <= phi_4
 
-# y in {1, 2, 3}, 
+# y in {1, 2, 3} 
 y   <- cut(as.double(z), breaks=phi, labels=FALSE, ordered_result = TRUE)
 table(y)
 
@@ -75,7 +78,7 @@ B <- matrix(NA, ndraw, params)
 colnames(B) <- c("rho", paste("beta_", 1:k, sep=""), paste("phi_", 0:J, sep=""))
 
 
-phi <- c(-Inf, 0, 0.5, 2.5, Inf)   # start vector
+phi <- c(-Inf, 0, 0.5, 2.5, Inf)   # start vector 0..J
 
 # MCMC loop  
 for (i in 1:ndraw) {
@@ -138,5 +141,27 @@ abline(h=1, lty=2, col="red")
 plot(B[,8], type="l")        # path of phi_3
 abline(h=2, lty=2, col="red")
 
+phi_hat <- colMeans(B[,(k+2):params])
+plot(density(eps), xlab=expression(epsilon))           # model residuals
+abline(v=phi_hat, lty=2)                               # cutpoints between choices
+
+# compare cutpoints + probabilities with actual counts (see Greene (2003), section 21.8)
+table(y)
+#y
+#  1   2   3   4 
+#121  84  61 134
+
+table(y) / length(y)
+#y
+#     1      2      3      4 
+#0.3025 0.2100 0.1525 0.3350
+
+# FALSCH!
+table(eps < phi_hat[2])/n # y = 1
+table(phi_hat[2] <= eps & eps < phi_hat[3])/n # y = 2 
+table(phi_hat[3] <= eps & eps < phi_hat[4])/n # y = 3
+table(eps > phi_hat[4])/n
+#    1       2     3
+#0.445   0.375  0.16
 
 
