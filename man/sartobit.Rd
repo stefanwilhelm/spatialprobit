@@ -135,7 +135,7 @@ lat <- rnorm(n)
 long <- rnorm(n)
 W <- kNearestNeighbors(lat, long, k=6)
 
-y <- as.double(solve(I_n - rho * W) %*% (X %*% beta + eps))
+y <- as.double(solve(I_n - rho * W) \%*\% (X \%*\% beta + eps))
 table(y > 0)
 
 # full information
@@ -149,7 +149,7 @@ y[ind] <- 0
 fit_sar <- sartobit(yfull ~ X-1, W,ndraw=1000,burn.in=200, showProgress=FALSE)
 summary(fit_sar)
 
-# Fit SAR Tobit (with approx. 50% censored observations)
+# Fit SAR Tobit (with approx. 50\% censored observations)
 fit_sartobit <- sartobit(y ~ x,W,ndraw=1000,burn.in=200, showProgress=TRUE)
 
 par(mfrow=c(2,2))
