@@ -1,0 +1,396 @@
+# SAR Ordered Probit / Ordered spatial probit model
+#
+# see LeSage (2009), section 10.2
+# see Greene (2003), section 21.8 for non-spatial ordered probit
+#
+# model:
+# (1)  z = rho * W  * z + X beta + eps
+# (2) y_i can take J alternatives (j = 1,...,J) for
+#     y_i = j, if phi_{j-1} <= z <= phi_j
+# (3) phi is a vector
+#
+# SAR probit is special case with J=1 (2 alternatives) 
+# and phi=c(-Inf, 0, Inf) is J+1 vector with phi[0] = -Inf, phi[1]=0 and phi[J]= +Inf
+# Model paramaters to be estimated:
+# beta, rho and vector phi (J-2 values)
+#
+# TO BE DONE
+# 0. Is there an implementation of SAR Ordered Probit in LeSage Matlab Toolbox?
+# 1. Does sigma_eps need to be estimated?
+# 2. What is the difference for drawing rho if any?
+# 3. Is there any change required for the marginal effects / impacts() method?
+# 4. Summary method for class "sarprobit"?
+# beta, rho and vector phi (J-2 values: phi[2],...,phi[J-1])
+
+library(tmvtnorm)
+library(spatialprobit)
+source("../R/SpatialProbit-MCMC.R")
+source("../R/stats_distributions.r")
+
+# Bayesian estimation of the SAR Ordered Probit model
+#
+sarorderedprobit <- function(formula, W, data, ...) {
+  cl <- match.call()                     # cl ist object of class "call"
+  mf <- match.call(expand.dots = FALSE)  # mf ist object of class "call"
+  m  <- match(c("formula", "data"), names(mf), 0L)        # m is index vector
+  mf <- mf[c(1L, m)]
+  mf$drop.unused.levels <- TRUE
+  mf[[1L]] <- as.name("model.frame")
+  mf <- eval(mf, parent.frame())         # from here mf is a data.frame
+  mt <- attr(mf, "terms")                # mt is object of class "terms" and "formula"
+  y <- model.response(mf, "numeric")
+  if (!is.null(W) && !is.numeric(W) && !inherits(W, "sparseMatrix") && nrow(W) != NROW(y)) 
+    stop(gettextf("'W' must be a numeric square matrix, dimension %d should equal %d (number of observations)",
+      NROW(W), NROW(y)), domain = NA)
+  
+  X <- model.matrix(mt, mf, contrasts)
+  sar_ordered_probit_mcmc(y, X, W, ...)    
+} 
+
+
+################################################################################
+#
+# Example with J = 4 alternatives
+#
+################################################################################
+
+# set up a model like in SAR probit
+J <- 4   # ordered alternatives j=1, 2, 3, 4 --> (J-2)=2 cutoff-points to be estimated phi_2, phi_3
+phi <- c(-Inf, 0,  +1, +2, Inf)    # phi_0,...,phi_j, vector of length (J+1)
+# phi_1 = 0 is a identification restriction
+
+# generate random samples from true model
+n <- 400             # number of items
+k <- 3               # 3 beta parameters
+beta <- c(0, -1, 1)  # true model parameters k=3 beta=(beta1,beta2,beta3)
+rho <- 0.75
+# design matrix with two standard normal variates as "coordinates"
+X <- cbind(intercept=1, x=rnorm(n), y=rnorm(n))
+
+# identity matrix I_n
+I_n <- sparseMatrix(i=1:n, j=1:n, x=1)
+
+# build spatial weight matrix W from coordinates in X
+W <- kNearestNeighbors(x=rnorm(n), y=rnorm(n), k=6)
+
+# create samples from epsilon using independence of distributions (rnorm()) to avoid dense matrix I_n
+eps <- rnorm(n=n, mean=0, sd=1)
+z   <- solve(qr(I_n - rho * W), X %*% beta + eps)
+
+# ordered variable y:
+# y_i = 1 for phi_0 < z <= phi_1; -Inf < z <= 0
+# y_i = 2 for phi_1 < z <= phi_2
+# y_i = 3 for phi_2 < z <= phi_3
+# y_i = 4 for phi_3 < z <= phi_4
+
+# y in {1, 2, 3} 
+y   <- cut(as.double(z), breaks=phi, labels=FALSE, ordered_result = TRUE)
+table(y)
+
+################################################################################
+
+#sar_orderedprobit_mcmc <- function(y, X, W, ndraw=1000, burn.in=100, thinning=1, 
+#  prior=list(a1=1, a2=1, c=rep(0, ncol(X)), T=diag(ncol(X))*1e12, lflag = 0), 
+#  start=list(rho=0.75, beta=rep(0, ncol(X))),
+#  m=10, computeMarginalEffects=TRUE, showProgress=FALSE){  
+#
+
+# method parameters
+ndraw=1000
+burn.in=100
+thinning=1
+prior=list(a1=1, a2=1, c=rep(0, ncol(X)), T=diag(ncol(X))*1e12, lflag = 0)
+start=list(rho=0.75, beta=rep(0, ncol(X)), phi=c(-Inf, 0, 0.5, 2.5, Inf))
+m=10                            # Anzahl MCMC samples for truncated normal variates
+computeMarginalEffects=TRUE
+showProgress=TRUE
+
+  #start timer
+  timet <- Sys.time()
+  
+  n  <- nrow( X )            # number of observations
+  n1 <- nrow( X )          
+  n2 <- nrow( W )
+  k <- ncol( X )             # number of of parameters/exogenous variables
+  I_n <- sparseMatrix(i=1:n, j=1:n, x=1) # sparse identity matrix
+  if (is.null(colnames(X))) colnames(X) <- paste("x",1:k,sep="")
+
+
+# validate inputs
+# (1) check y in 1...J
+  # J <- 4
+  J <- max(y)
+  if( sum(y %in% 1:J) != length( y ) ){
+    stop('sarorderedprobit: not all y-values are in 0...J')
+  }
+  if( n1 != n2 && n1 != n ){
+    stop('sarorderedprobit: wrong size of spatial weight matrix W')
+  }
+  # check if spatial weights matrix W does not contain zeros in the main diagonal
+  if (!inherits(W, "sparseMatrix") || any(diag(W) != 0)) {
+    stop('sarorderedprobit: spatial weights matrix W must be a sparse matrix with zeros in the main diagonal')
+  }
+  
+# check if we have a constant term in X
+  ind <- match( n, apply(X,2,sum))
+  if( is.na(ind) ){
+    cflag <- 0
+    p     <- k
+  }else if( ind == 1 ){
+    cflag <- 1
+    p     <- k - 1
+  }else{
+    stop('sarorderedprobit: intercept term must be in first column of the X-matrix')
+  }
+  
+  
+# MCMC start values
+rho  <- start$rho          # start value of rho
+beta <- start$beta         # start value of parameters, prior value, we could also sample from beta ~ N(c, T)
+phi  <- start$phi
+
+# MCMC priors
+# conjugate prior beta ~ N(c, T)
+# parametrize, default to diffuse prior, for beta, e.g. T <- diag(k) * 1e12
+c <- rep(0, k)             # prior distribution of beta ~ N(c, T) : c = 0
+if (is.numeric(prior$c) && length(prior$c) == k) {
+  c <- prior$c
+}
+if (is.matrix(prior$T) && ncol(prior$T) == k && isSymmetric(prior$T) && det(prior$T) > 0) {
+  T <- prior$T               # prior distribution of beta ~ N(c, T) : T = I_n --> diffuse prior
+} else {
+  T <- diag(k)*1e12
+}
+Tinv <- solve(T)           # T^{-1}
+
+S <- I_n - rho * W
+H <- t(S) %*% S
+QR <- qr(S)                # class "sparseQR"
+mu <- solve(QR, X %*% beta)
+
+# progress bar
+if (showProgress) {
+  pb <- txtProgressBar(min=0, max=(thinning * ndraw + burn.in), initial=0, style=3)
+}
+
+# immutable matrices
+tX <- t(X)                    # X'               # k x n
+xpx  <- t(X) %*% X            # (X'X)            # k x k
+xpxI <- solve(xpx)            # (X'X)^{-1}       # k x k
+xxpxI <- X %*% xpxI           # X(X'X)^(-1)     # n x k (better, compromise)
+AA    <- solve(xpx + Tinv)    # (X'X + T^{-1})^{-1}
+
+# prepare settings for drawing rho
+  rmin       <- -1   # use -1,1 rho interval as default
+  rmax       <-  1
+  
+  lflag <- 0
+  if (is.numeric(prior$lflag) && lflag %in% c(0, 1, 2)) lflag <- prior$lflag
+  #lflag=0 --> default to 1997 Pace and Barry grid approach
+  #lflag=1 --> Pace and LeSage (2004) Chebyshev approximation
+  #lflag=2 --> Barry and Pace (1999) MC determinant approx
+  tmp <- sar_lndet(lflag, W, rmin, rmax)
+  detval <- tmp$detval
+  
+  # Some precalculated quantities for drawing rho
+  # rho ~ Beta(a1, a2) prior
+  a1         <-  1
+  a2         <-  1
+  if (is.numeric(prior$a1)) a1 <- prior$a1
+  if (is.numeric(prior$a2)) a2 <- prior$a2
+  
+  lnbprior <- log(beta_prior(detval[,1],a1,a2))
+  u        <- runif(thinning * ndraw + burn.in)   # u ~ U(0, 1)
+  nrho     <- nrow(detval)  # do_ldet() liefert nur 2000 statt 2001 Gridpoints
+  nmk      <- (n-k)/2
+  rho_grid   <- detval[,1]  # rho grid values
+  lndet    <- detval[,2]  # log-determinant grid values
+  rho_gridsq <- rho_grid * rho_grid
+  yy       <- (rho_grid[2:nrho] + rho_grid[1:(nrho-1)])
+
+
+# MCMC parameters
+params <- k + 1 + (J+1)            # 7 parameters rho, beta (k), phi (J + 1), aber nur J-2 zu schätzen
+# matrix to store the beta + rho parameters for each iteration/draw
+B <- matrix(NA, ndraw, params)
+colnames(B) <- c(paste("beta_", 1:k, sep=""), "rho", paste("phi_", 0:J, sep=""))
+
+# just to set a start value for z
+z <- rep(0, n)
+ones <- rep(1, n)
+
+# MCMC loop  
+for (i in (1 - burn.in):(ndraw * thinning)) {
+  
+  # 1. sample from z | rho, beta, y using precision matrix H
+  # mu will be updated after drawing from rho
+  mu <- solve(qr(S), X %*% beta)
+  
+  # determine lower and upper bounds for z depending on the value of y and phi
+  # eqn (10.14), p.299
+  # besser: y = 1..J
+  lower <- phi[y]
+  upper <- phi[y+1]
+  
+  # see cbind(y, lower, upper)
+
+  # see LeSage (2009) for choice of burn-in size, often m=5 or m=10 is used!
+  # we can also use m=1 together with start.value=z, see LeSage (2009), section 10.1.5
+  if (m==1) {
+    z <- as.double(rtmvnorm.sparseMatrix(n=1, mean=mu, H=H, 
+      lower=lower, upper=upper, burn.in=m, start.value=z))
+  } else {
+    z <- as.double(rtmvnorm.sparseMatrix(n=1, mean=mu, H=H, 
+      lower=lower, upper=upper, burn.in=m))
+  }
+
+  # 2. sample from beta | rho, z, y
+  c <- AA  %*% (tX %*% S %*% z + Tinv %*% c)
+  T <- AA   # no update basically on T, TODO: check this
+  beta <- as.vector(rmvnorm(n=1, mean=c, sigma=T))
+
+  # 3. sample from rho | beta, z
+  #---- DRAW RHO ----
+  #see LeSage 2009 chapter 5 - page 132 for the explanation of the
+  #code below which is used for numerical integration of the rho prior.
+  #I changed from the original code to match the notation of the book
+  #using c0 and cd below instead of b0 and bd ....
+  xpz  <- tX %*% z           # X'z
+  Wz   <- as.double(W %*% z) # Wz        # SW: coerce Wz to vector 
+  # (from n x 1 sparse matrix! we do not need a sparse matrix here)
+  xpWz <- tX %*% Wz          # X'Wz      # k x 1
+  e0   <-  z - xxpxI %*% xpz  # z  - X(X'X)^-1X' z
+  ed   <- Wz - xxpxI %*% xpWz # Wz - X(X'X)^(-1)X'Wz
+  epe0 <- as.double(crossprod(e0))  # slightly faster than t(e0) %*% e0
+  eped <- as.double(crossprod(ed))
+  epe0d<- as.double(crossprod(ed, e0))
+  rho  <- draw_rho(rho_grid, lndet, rho_gridsq, yy, epe0, eped, epe0d, rho, nmk=nmk, nrho=nrho, lnbprior, u=u[i + burn.in])
+  # keep rho fixed for now
+  #rho <- 0.75
+  
+  # 4. determine bounds/cut-points p(phi_j | phi_{-j}, z, y, beta) for j = 2,...,J-1
+  for (j in 2:(J-1)) {
+    phi.lower <- max(max(z[y == j]),     phi[j-1+1])   # \bar{phi}_{j-1}, SW: +1 is needed as our vector index starts with 1
+    phi.upper <- min(min(z[y == j + 1]), phi[j+1+1])   # \bar{phi}_{j+1}
+    
+    # Sample phi_{j | phi_{-j}, z, y, beta)
+    phi[j + 1]   <- runif(n=1, min=phi.lower, max=phi.upper)
+  }
+
+  # update S and H
+  S <- I_n - rho * W
+  H <- t(S) %*% S      # H = S'S  / SW: crossprod(S) does not seem to work!
+  QR <- qr(S)          # class "sparseQR"
+  
+  # solving equation 
+  # (I_n - rho * W) mu = X beta 
+  # instead of inverting S = I_n - rho * W as in mu = ( In -  rho W)^{-1} X beta.
+  # QR-decomposition for sparse matrices
+  mu <- solve(QR, X %*% beta)
+
+  if (i > 0) {
+    if (thinning == 1) {
+      ind <- i
+    }
+    else if (i%%thinning == 0) {
+      ind <- i%/%thinning
+    } else {
+      next
+    }
+    # save parameters in this MCMC round
+    B[ind,] <- c(beta, rho, phi)   # (k + 1) + (J + 1)
+    #zmean   <- zmean + z
+  }
+  if (showProgress) setTxtProgressBar(pb, i + burn.in) # update progress bar
+}
+if (showProgress)  close(pb) #close progress bar
+  
+# fitted values for estimates (based on z rather than binary y like in fitted(glm.fit))
+# (on reponse scale y vs. linear predictor scale z...)
+beta  <- colMeans(B)[1:k]
+rho   <- colMeans(B)[k+1]
+phi   <- colMeans(B)[(k+2):((k + 1) + (J + 1))]
+
+S     <- (I_n - rho * W)
+fitted.values   <- solve(qr(S), X %*% beta) # z = (I_n - rho * W)^{-1}(X * beta)
+fitted.response <- cut(as.double(fitted.values), breaks=phi, labels=FALSE, ordered_result = TRUE) # split according to phi values
+
+table(y, fitted.response)
+#   fitted.response
+#y     1   2   3   4
+#  1 153  34   9   0
+#  2  19  20  16   4
+#  3   4  16  27  13
+#  4   5  10  23  47
+
+# result
+results       <- NULL
+results$time  <- Sys.time() - timet
+results$nobs  <- n          # number of observations
+results$nvar  <- k          # number of explanatory variables
+results$y     <- y 
+results$zip   <- n - sum(y) # number of zero values in the y-vector
+results$beta  <- colMeans(B)[1:k]
+results$rho   <- colMeans(B)[k+1]
+results$coefficients <- colMeans(B)
+results$fitted.values <- fitted.values
+#results$fitted.reponse <- fitted.reponse  # fitted values on reponse scale (binary y variable)
+results$ndraw <- ndraw
+results$nomit <- burn.in
+results$a1        <- a1
+results$a2        <- a2
+results$rmax      <- rmax 
+results$rmin      <- rmin
+results$tflag     <- 'plevel'
+results$lflag     <- lflag
+results$cflag     <- cflag
+results$lndet     <- detval
+results$names     <- c(colnames(X), 'rho')
+results$B         <- B        # (beta, rho, phi) draws
+results$bdraw     <- B[,1:k]  # beta draws
+results$pdraw     <- B[,k+1]  # rho draws
+results$total     <- total
+results$direct    <- direct
+results$indirect  <- indirect
+results$W <- W
+results$X <- X
+#results$mlike     <- mlike    # log-likelihood based on posterior means
+
+#results$predicted <- # prediction required. The default is on the scale of the linear predictors
+class(results)    <- "sarorderedprobit"
+
+
+################################################################################
+
+
+par(mfrow=c(2,2))
+plot(B[,7], type="l")        # path of phi_2
+abline(h=1, lty=2, col="red")
+
+plot(B[,8], type="l")        # path of phi_3
+abline(h=2, lty=2, col="red")
+
+phi_hat <- colMeans(B[,(k+2):params])
+plot(density(eps), xlab=expression(epsilon))           # model residuals
+abline(v=phi_hat, lty=2)                               # cutpoints between choices
+
+# compare cutpoints + probabilities with actual counts (see Greene (2003), section 21.8)
+table(y)
+#y
+#  1   2   3   4 
+#121  84  61 134
+
+table(y) / length(y)
+#y
+#     1      2      3      4 
+#0.3025 0.2100 0.1525 0.3350
+
+# FALSCH!
+table(eps < phi_hat[2])/n # y = 1
+table(phi_hat[2] <= eps & eps < phi_hat[3])/n # y = 2 
+table(phi_hat[3] <= eps & eps < phi_hat[4])/n # y = 3
+table(eps > phi_hat[4])/n
+#    1       2     3
+#0.445   0.375  0.16
+
+
