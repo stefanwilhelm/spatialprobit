@@ -12,21 +12,17 @@
 # SAR probit is special case with J=1 (2 alternatives) 
 # and phi=c(-Inf, 0, Inf) is J+1 vector with phi[0] = -Inf, phi[1]=0 and phi[J]= +Inf
 # Model paramaters to be estimated:
-# beta, rho and vector phi (J-2 values)
+# beta, rho and vector phi (J-2 values: phi[2],...,phi[J-1])
 #
 # TO BE DONE
 # 0. Is there an implementation of SAR Ordered Probit in LeSage Matlab Toolbox?
 # 1. Does sigma_eps need to be estimated?
 # 2. What is the difference for drawing rho if any?
 # 3. Is there any change required for the marginal effects / impacts() method?
-# 4. Summary method for class "sarprobit"?
-# beta, rho and vector phi (J-2 values: phi[2],...,phi[J-1])
-
-library(tmvtnorm)
-library(spatialprobit)
-source("../R/SpatialProbit-MCMC.R")
-source("../R/stats_distributions.r")
-
+# 4. Summary method for class "sarprobit" anpassen? JA wegen phi und wegen #0 und #1 values (vs. table of y)
+# 5. Guten Default Wert für phi überlegen...
+# 6. Impacts() überlegen
+#
 # Bayesian estimation of the SAR Ordered Probit model
 #
 sarorderedprobit <- function(formula, W, data, ...) {
@@ -48,62 +44,24 @@ sarorderedprobit <- function(formula, W, data, ...) {
 } 
 
 
-################################################################################
-#
-# Example with J = 4 alternatives
-#
-################################################################################
-
-# set up a model like in SAR probit
-J <- 4   # ordered alternatives j=1, 2, 3, 4 --> (J-2)=2 cutoff-points to be estimated phi_2, phi_3
-phi <- c(-Inf, 0,  +1, +2, Inf)    # phi_0,...,phi_j, vector of length (J+1)
-# phi_1 = 0 is a identification restriction
-
-# generate random samples from true model
-n <- 400             # number of items
-k <- 3               # 3 beta parameters
-beta <- c(0, -1, 1)  # true model parameters k=3 beta=(beta1,beta2,beta3)
-rho <- 0.75
-# design matrix with two standard normal variates as "coordinates"
-X <- cbind(intercept=1, x=rnorm(n), y=rnorm(n))
-
-# identity matrix I_n
-I_n <- sparseMatrix(i=1:n, j=1:n, x=1)
-
-# build spatial weight matrix W from coordinates in X
-W <- kNearestNeighbors(x=rnorm(n), y=rnorm(n), k=6)
-
-# create samples from epsilon using independence of distributions (rnorm()) to avoid dense matrix I_n
-eps <- rnorm(n=n, mean=0, sd=1)
-z   <- solve(qr(I_n - rho * W), X %*% beta + eps)
-
-# ordered variable y:
-# y_i = 1 for phi_0 < z <= phi_1; -Inf < z <= 0
-# y_i = 2 for phi_1 < z <= phi_2
-# y_i = 3 for phi_2 < z <= phi_3
-# y_i = 4 for phi_3 < z <= phi_4
-
-# y in {1, 2, 3} 
-y   <- cut(as.double(z), breaks=phi, labels=FALSE, ordered_result = TRUE)
-table(y)
 
 ################################################################################
 
-#sar_orderedprobit_mcmc <- function(y, X, W, ndraw=1000, burn.in=100, thinning=1, 
-#  prior=list(a1=1, a2=1, c=rep(0, ncol(X)), T=diag(ncol(X))*1e12, lflag = 0), 
-#  start=list(rho=0.75, beta=rep(0, ncol(X))),
-#  m=10, computeMarginalEffects=TRUE, showProgress=FALSE){  
-#
+sar_orderedprobit_mcmc <- function(y, X, W, ndraw=1000, burn.in=100, thinning=1, 
+  prior=list(a1=1, a2=1, c=rep(0, ncol(X)), T=diag(ncol(X))*1e12, lflag = 0), 
+  start=list(rho=0.75, beta=rep(0, ncol(X)), phi=c(-Inf, 0, 0.5, 2.5, Inf)),
+  m=10, computeMarginalEffects=TRUE, showProgress=FALSE){  
+
 
 # method parameters
-ndraw=1000
-burn.in=100
-thinning=1
-prior=list(a1=1, a2=1, c=rep(0, ncol(X)), T=diag(ncol(X))*1e12, lflag = 0)
-start=list(rho=0.75, beta=rep(0, ncol(X)), phi=c(-Inf, 0, 0.5, 2.5, Inf))
-m=10                            # Anzahl MCMC samples for truncated normal variates
-computeMarginalEffects=TRUE
-showProgress=TRUE
+#ndraw=1000
+#burn.in=100
+#thinning=1
+#prior=list(a1=1, a2=1, c=rep(0, ncol(X)), T=diag(ncol(X))*1e12, lflag = 0)
+#start=list(rho=0.75, beta=rep(0, ncol(X)), phi=c(-Inf, 0, 0.5, 2.5, Inf))
+#m=10                            # Anzahl MCMC samples for truncated normal variates
+#computeMarginalEffects=TRUE
+#showProgress=TRUE
 
   #start timer
   timet <- Sys.time()
@@ -121,7 +79,7 @@ showProgress=TRUE
   # J <- 4
   J <- max(y)
   if( sum(y %in% 1:J) != length( y ) ){
-    stop('sarorderedprobit: not all y-values are in 0...J')
+    stop('sarorderedprobit: not all y-values are in 1...J')
   }
   if( n1 != n2 && n1 != n ){
     stop('sarorderedprobit: wrong size of spatial weight matrix W')
@@ -345,52 +303,74 @@ results$tflag     <- 'plevel'
 results$lflag     <- lflag
 results$cflag     <- cflag
 results$lndet     <- detval
-results$names     <- c(colnames(X), 'rho')
+results$names     <- c(colnames(X), 'rho', paste("phi_", 0:J, sep=""))
 results$B         <- B        # (beta, rho, phi) draws
 results$bdraw     <- B[,1:k]  # beta draws
 results$pdraw     <- B[,k+1]  # rho draws
-results$total     <- total
-results$direct    <- direct
-results$indirect  <- indirect
+#results$total     <- total
+#results$direct    <- direct
+#results$indirect  <- indirect
 results$W <- W
 results$X <- X
 #results$mlike     <- mlike    # log-likelihood based on posterior means
 
 #results$predicted <- # prediction required. The default is on the scale of the linear predictors
-class(results)    <- "sarorderedprobit"
+class(results)    <- c("sarorderedprobit", "sarprobit")
+return(results)
+}
+
+# summary method for class "sarprobit"
+summary.sarorderedprobit <- function(object, var_names=NULL, file=NULL, 
+  digits = max(3, getOption("digits")-3), ...){
+  # check for class "sarorderedprobit"
+  if (!inherits(object, "sarorderedprobit")) 
+        stop("use only with \"sarorderedprobit\" objects")
+        
+  nobs      <- object$nobs
+  nvar      <- object$nvar
+  ndraw     <- object$ndraw
+  nomit     <- object$nomit
+  draws     <- object$B
+  
+  #bayesian estimation
+  bout_mean <- object$coefficients                         #parameter mean column
+  bout_sd   <- apply(draws, 2, sd)                         #parameter sd colum
+  # build bayesian significance levels
+  # for parameter > 0 count all draws > 0  and determine P(X <= 0)
+  # for parameter <= 0 count all draws <0  and determine P(X >= 0)
+  bout_sig <- 1 - apply(draws, 2, function(x) { ifelse (mean(x) > 0, sum(x > 0), sum(x < 0)) }) / ndraw
+  #standard asymptotic measures
+  bout_t    <- bout_mean / bout_sd             #t score b/se
+  bout_tPval<- (1 - pt( abs(bout_t), nobs ))*2 #two tailed test = zero probability = z-prob
+  #name definition
+  if( is.null(var_names)){
+    bout_names<- as.matrix(object$names)
+  }else{
+    bout_names<- as.matrix(var_names)
+  }
+  
+  if(is.null(file)){file <- ""}#output to the console
+  #HEADER
+  write(sprintf("----MCMC spatial autoregressive ordered probit----"), file, append=T)
+  #sprintf("Dependent Variable")
+  write(sprintf("Execution time  = %6.3f %s", object$time, attr(object$time, "units"))  , file, append=T)
+  write(sprintf("N steps for TMVN= %6d"  , object$nsteps), file, append=T)
+  write(sprintf("N draws         = %6d, N omit (burn-in)= %6d", ndraw, nomit), file, append=T)
+  write(sprintf("N observations  = %6d, K covariates    = %6d", nobs, nvar)  , file, append=T)
+  write(sprintf("Min rho         = % 6.3f, Max rho         = % 6.3f", object$rmin, object$rmax), file, append=T)
+  write(sprintf("--------------------------------------------------"), file, append=T)
+  write(sprintf(""), file, append=T)
+  #DISTRIBUTION OF y VALUES
+  print(table(y=object$y))
+  #ESTIMATION RESULTS
+  coefficients <- cbind(bout_mean, bout_sd, bout_sig, bout_t, bout_tPval)
+  dimnames(coefficients) <- list(bout_names, 
+        c("Estimate", "Std. Dev", "p-level", "t-value", "Pr(>|z|)"))
+  printCoefmat(coefficients, digits = digits,
+    signif.stars = getOption("show.signif.stars"))      
+  return(invisible(coefficients))
+}
 
 
-################################################################################
-
-
-par(mfrow=c(2,2))
-plot(B[,7], type="l")        # path of phi_2
-abline(h=1, lty=2, col="red")
-
-plot(B[,8], type="l")        # path of phi_3
-abline(h=2, lty=2, col="red")
-
-phi_hat <- colMeans(B[,(k+2):params])
-plot(density(eps), xlab=expression(epsilon))           # model residuals
-abline(v=phi_hat, lty=2)                               # cutpoints between choices
-
-# compare cutpoints + probabilities with actual counts (see Greene (2003), section 21.8)
-table(y)
-#y
-#  1   2   3   4 
-#121  84  61 134
-
-table(y) / length(y)
-#y
-#     1      2      3      4 
-#0.3025 0.2100 0.1525 0.3350
-
-# FALSCH!
-table(eps < phi_hat[2])/n # y = 1
-table(phi_hat[2] <= eps & eps < phi_hat[3])/n # y = 2 
-table(phi_hat[3] <= eps & eps < phi_hat[4])/n # y = 3
-table(eps > phi_hat[4])/n
-#    1       2     3
-#0.445   0.375  0.16
 
 
