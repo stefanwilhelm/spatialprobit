@@ -1,5 +1,9 @@
 User visible changes in spatialprobit package
 
+changes in spatialprobit 0.9-10 (2013-04-28)
+# Fixed a bug with the SAR probit total effects (thanks to Virgilio.Gomez@uclm.es)
+# Added estimation of SAR ordered probit (sarorderedprobit())
+
 changes in spatialprobit 0.9-9 (2013-06-03)
 # Added some checks on the input parameters in sarprobit(). Matrix W must not have non-zeros in the main diagonal.
 

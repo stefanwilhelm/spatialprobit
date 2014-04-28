@@ -22,6 +22,11 @@ export(marginal.effects.sarprobit)
 export(impacts.sarprobit)
 export(logLik.sarprobit)
 
+# SAR ordered probit 
+export(sarorderedprobit)
+export(sar_ordered_probit_mcmc)
+export(summary.sarprobit)
+
 # SAR Tobit
 export(sartobit)
 export(sar_tobit_mcmc)
