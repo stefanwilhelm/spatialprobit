@@ -9,11 +9,12 @@ Bayesian estimation of the spatial autoregressive ordered probit model (SAR orde
 }
 
 \usage{
-sarorderedprobit(formula, W, data, ...)
+sarorderedprobit(formula, W, data, subset, ...)
 
 sar_ordered_probit_mcmc(y, X, W, ndraw = 1000, burn.in = 100, thinning = 1, 
   prior=list(a1=1, a2=1, c=rep(0, ncol(X)), T=diag(ncol(X))*1e12, lflag = 0), 
-  start = list(rho = 0.75, beta = rep(0, ncol(X))),
+  start = list(rho = 0.75, beta = rep(0, ncol(X)), 
+  phi = c(-Inf, 0:(max(y)-1), Inf)),
   m=10, computeMarginalEffects=TRUE, showProgress=FALSE)
 
 }
