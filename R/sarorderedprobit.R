@@ -25,10 +25,10 @@
 #
 # Bayesian estimation of the SAR Ordered Probit model
 #
-sarorderedprobit <- function(formula, W, data, ...) {
+sarorderedprobit <- function(formula, W, data, subset, ...) {
   cl <- match.call()                     # cl ist object of class "call"
   mf <- match.call(expand.dots = FALSE)  # mf ist object of class "call"
-  m  <- match(c("formula", "data"), names(mf), 0L)        # m is index vector
+  m  <- match(c("formula", "data", "subset"), names(mf), 0L)        # m is index vector
   mf <- mf[c(1L, m)]
   mf$drop.unused.levels <- TRUE
   mf[[1L]] <- as.name("model.frame")
@@ -47,9 +47,9 @@ sarorderedprobit <- function(formula, W, data, ...) {
 
 ################################################################################
 
-sar_orderedprobit_mcmc <- function(y, X, W, ndraw=1000, burn.in=100, thinning=1, 
+sar_ordered_probit_mcmc <- function(y, X, W, ndraw=1000, burn.in=100, thinning=1, 
   prior=list(a1=1, a2=1, c=rep(0, ncol(X)), T=diag(ncol(X))*1e12, lflag = 0), 
-  start=list(rho=0.75, beta=rep(0, ncol(X)), phi=c(-Inf, 0, 0.5, 2.5, Inf)),
+  start=list(rho=0.75, beta=rep(0, ncol(X)), phi=c(-Inf, 0:(max(y)-1), Inf)),
   m=10, computeMarginalEffects=TRUE, showProgress=FALSE){  
 
 
@@ -104,8 +104,19 @@ sar_orderedprobit_mcmc <- function(y, X, W, ndraw=1000, burn.in=100, thinning=1,
   
 # MCMC start values
 rho  <- start$rho          # start value of rho
+if (is.null(rho)) {
+  rho <- 0.75
+  warning("No start value set for rho. Setting rho=0.75")
+}
 beta <- start$beta         # start value of parameters, prior value, we could also sample from beta ~ N(c, T)
+if (is.null(beta)) {
+  beta <- rep(0, ncol(X))
+  warning(sprintf("No start value set for beta. Setting beta=%s", paste(beta, collapse=",")))
+}
 phi  <- start$phi
+if (is.null(phi)) {
+  phi <- c(-Inf, 0:(J-1), +Inf)
+}
 
 # MCMC priors
 # conjugate prior beta ~ N(c, T)
@@ -168,10 +179,10 @@ AA    <- solve(xpx + Tinv)    # (X'X + T^{-1})^{-1}
 
 
 # MCMC parameters
-params <- k + 1 + (J+1)            # 7 parameters rho, beta (k), phi (J + 1), aber nur J-2 zu schätzen
+params <- (k+1) + (J-1)            # parameters beta (k), rho (1), (J-1) cut parameters phi, aber nur (J-2) zu schätzen
 # matrix to store the beta + rho parameters for each iteration/draw
 B <- matrix(NA, ndraw, params)
-colnames(B) <- c(paste("beta_", 1:k, sep=""), "rho", paste("phi_", 0:J, sep=""))
+colnames(B) <- c(paste("beta_", 1:k, sep=""), "rho", paste("y>=", 2:J, sep=""))
 
 # just to set a start value for z
 z <- rep(0, n)
@@ -227,6 +238,7 @@ for (i in (1 - burn.in):(ndraw * thinning)) {
   #rho <- 0.75
   
   # 4. determine bounds/cut-points p(phi_j | phi_{-j}, z, y, beta) for j = 2,...,J-1
+  # phi_j = 0 is set fixed!
   for (j in 2:(J-1)) {
     phi.lower <- max(max(z[y == j]),     phi[j-1+1])   # \bar{phi}_{j-1}, SW: +1 is needed as our vector index starts with 1
     phi.upper <- min(min(z[y == j + 1]), phi[j+1+1])   # \bar{phi}_{j+1}
@@ -256,7 +268,7 @@ for (i in (1 - burn.in):(ndraw * thinning)) {
       next
     }
     # save parameters in this MCMC round
-    B[ind,] <- c(beta, rho, phi)   # (k + 1) + (J + 1)
+    B[ind,] <- c(beta, rho, phi[2:J])   # (k + 1) + (J - 1)
     #zmean   <- zmean + z
   }
   if (showProgress) setTxtProgressBar(pb, i + burn.in) # update progress bar
@@ -267,7 +279,8 @@ if (showProgress)  close(pb) #close progress bar
 # (on reponse scale y vs. linear predictor scale z...)
 beta  <- colMeans(B)[1:k]
 rho   <- colMeans(B)[k+1]
-phi   <- colMeans(B)[(k+2):((k + 1) + (J + 1))]
+#browser()
+phi   <- c(-Inf, colMeans(B)[(k+2):((k+2) + (J-2))], Inf)
 
 S     <- (I_n - rho * W)
 fitted.values   <- solve(qr(S), X %*% beta) # z = (I_n - rho * W)^{-1}(X * beta)
@@ -303,7 +316,7 @@ results$tflag     <- 'plevel'
 results$lflag     <- lflag
 results$cflag     <- cflag
 results$lndet     <- detval
-results$names     <- c(colnames(X), 'rho', paste("phi_", 0:J, sep=""))
+results$names     <- c(colnames(X), 'rho', paste("y>=", 2:J, sep=""))
 results$B         <- B        # (beta, rho, phi) draws
 results$bdraw     <- B[,1:k]  # beta draws
 results$pdraw     <- B[,k+1]  # rho draws
