@@ -286,7 +286,7 @@ S     <- (I_n - rho * W)
 fitted.values   <- solve(qr(S), X %*% beta) # z = (I_n - rho * W)^{-1}(X * beta)
 fitted.response <- cut(as.double(fitted.values), breaks=phi, labels=FALSE, ordered_result = TRUE) # split according to phi values
 
-table(y, fitted.response)
+#addMargins(table(y, fitted.response))
 #   fitted.response
 #y     1   2   3   4
 #  1 153  34   9   0
@@ -300,12 +300,12 @@ results$time  <- Sys.time() - timet
 results$nobs  <- n          # number of observations
 results$nvar  <- k          # number of explanatory variables
 results$y     <- y 
-results$zip   <- n - sum(y) # number of zero values in the y-vector
 results$beta  <- colMeans(B)[1:k]
 results$rho   <- colMeans(B)[k+1]
+results$phi   <- colMeans(B)[(k+2):((k+2) + (J-2))]
 results$coefficients <- colMeans(B)
-results$fitted.values <- fitted.values
-#results$fitted.reponse <- fitted.reponse  # fitted values on reponse scale (binary y variable)
+results$fitted.values <- fitted.values      # fitted latent values
+results$fitted.response <- fitted.response  # fitted values on response scale (ordered y variable)
 results$ndraw <- ndraw
 results$nomit <- burn.in
 results$a1        <- a1
@@ -320,6 +320,7 @@ results$names     <- c(colnames(X), 'rho', paste("y>=", 2:J, sep=""))
 results$B         <- B        # (beta, rho, phi) draws
 results$bdraw     <- B[,1:k]  # beta draws
 results$pdraw     <- B[,k+1]  # rho draws
+results$phidraw   <- B[(k+2):((k+2) + (J-2))]
 #results$total     <- total
 #results$direct    <- direct
 #results$indirect  <- indirect
