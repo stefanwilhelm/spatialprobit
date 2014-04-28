@@ -181,10 +181,11 @@ sar_probit_mcmc <- function(y, X, W, ndraw=1000, burn.in=100, thinning=1,
     stop('sarprobit: intercept term must be in first column of the X-matrix')
   }
   
-  # MCMC sampling of beta
-  rho  <- start$rho          # start value of row
+  # MCMC start values
+  rho  <- start$rho          # start value of rho
   beta <- start$beta         # start value of parameters, prior value, we could also sample from beta ~ N(c, T)
   
+  # MCMC priors
   # conjugate prior beta ~ N(c, T)
   # parametrize, default to diffuse prior, for beta, e.g. T <- diag(k) * 1e12
   c <- rep(0, k)             # prior distribution of beta ~ N(c, T) : c = 0
@@ -217,7 +218,8 @@ sar_probit_mcmc <- function(y, X, W, ndraw=1000, burn.in=100, thinning=1,
   # truncation points for z, depend only on y, can be precalculated
   lower <- ifelse(y > 0, 0,  -Inf)
   upper <- ifelse(y > 0, Inf,   0)
-  
+
+# prepare settings for drawing rho  
   rmin       <- -1   # use -1,1 rho interval as default
   rmax       <-  1
   
@@ -386,7 +388,7 @@ sar_probit_mcmc <- function(y, X, W, ndraw=1000, burn.in=100, thinning=1,
       # and x is the solution of S %*% x = 1_n, obtained from the QR-decompositon
       # of S. The average total effects is then the mean of (D %*% x) * b[r]
       # average total effects, which can be furthermore done for all b[r] in one operation.
-      avg_total    <- mean(dd * qr.coef(QR, ones)) * beff
+      avg_total    <- mean(dd %*% qr.coef(QR, ones)) * beff
       avg_indirect <- avg_total - avg_direct    # (p x 1)
       
       total[ind, ]      <- avg_total    # an (ndraw-nomit x p) matrix
