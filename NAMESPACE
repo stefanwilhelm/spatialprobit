@@ -1,4 +1,5 @@
 import(stats)
+import(mvtnorm)
 import(tmvtnorm)
 import(Matrix)
 import(spdep)

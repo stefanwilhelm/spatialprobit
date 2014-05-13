@@ -3,4 +3,3 @@
 .*CVS.*
 ^data/CVS*
 ^tests/.*
-^tests2/.*
