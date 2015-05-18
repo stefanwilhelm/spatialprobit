@@ -1,6 +1,9 @@
 User visible changes in spatialprobit package
 
-changes in spatialprobit 0.9-10 (2013-04-28)
+changes in spatialprobit 0.9-11 (2015-05-18)
+# Fixed a bug in SEM probit which caused NAs
+
+changes in spatialprobit 0.9-10 (2014-04-28)
 # Fixed a bug with the SAR probit total effects (thanks to Virgilio.Gomez@uclm.es)
 # Added estimation of SAR ordered probit (sarorderedprobit())
 
