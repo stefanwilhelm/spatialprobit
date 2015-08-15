@@ -19,7 +19,7 @@ sar_ordered_probit_mcmc(y, X, W, ndraw = 1000, burn.in = 100, thinning = 1,
 
 }
 \arguments{
-  \item{y}{dependent variables. vector of zeros and ones}
+  \item{y}{dependent variables. vector of discrete choices from 1 to J (\{1,2,...,J\})}
   \item{X}{design matrix}
   \item{W}{spatial weight matrix}
   \item{ndraw}{number of MCMC iterations}
