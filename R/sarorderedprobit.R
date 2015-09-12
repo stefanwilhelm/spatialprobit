@@ -304,7 +304,7 @@ results$beta  <- colMeans(B)[1:k]
 results$rho   <- colMeans(B)[k+1]
 results$phi   <- colMeans(B)[(k+2):((k+2) + (J-2))]
 results$coefficients <- colMeans(B)
-results$fitted.values <- fitted.values      # fitted latent values
+results$fitted.values <- fitted.values      # fitted latent values on linear predictor scale
 results$fitted.response <- fitted.response  # fitted values on response scale (ordered y variable)
 results$ndraw <- ndraw
 results$nomit <- burn.in
@@ -333,7 +333,7 @@ class(results)    <- c("sarorderedprobit", "sarprobit")
 return(results)
 }
 
-# summary method for class "sarprobit"
+# summary method for class "sarorderedprobit"
 summary.sarorderedprobit <- function(object, var_names=NULL, file=NULL, 
   digits = max(3, getOption("digits")-3), ...){
   # check for class "sarorderedprobit"
