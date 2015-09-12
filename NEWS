@@ -1,7 +1,9 @@
 User visible changes in spatialprobit package
 
-changes in spatialprobit 0.9-11 (2015-05-18)
+changes in spatialprobit 0.9-11 (2015-09-12)
 # Fixed a bug in SEM probit which caused NAs
+# Added marginal effects estimation for spatial Tobit model (marginal.effects.sartobit())
+# Fixed problems from CRAN check results: https://cran.r-project.org/web/checks/check_results_spatialprobit.html
 
 changes in spatialprobit 0.9-10 (2014-04-28)
 # Fixed a bug with the SAR probit total effects (thanks to Virgilio.Gomez@uclm.es)
