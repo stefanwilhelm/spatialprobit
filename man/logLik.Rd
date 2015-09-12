@@ -23,7 +23,7 @@ The functions return the log likelihood for the spatial autoregressive probit mo
 }
 
 \author{
-Stefan Wilhelm
+Stefan Wilhelm <wilhelm@financial.com>
 }
 
 \seealso{
