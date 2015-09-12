@@ -251,13 +251,14 @@ sem_probit_mcmc <- function(y, X, W, ndraw=1000, burn.in=100, thinning=1,
   # E[z^(t) | z_{-i}^(t-1) ]  = mu^(t-1)  - diag(H)^{-1} H [ z^(t-1) - mu^(t-1) ] + [ z^(t-1) - mu^(t-1) ]
   # 
   # H = 1/sige * (I_n - rho * W)'(I_n - rho * W) = 1/sige * (I_n - 2*rho*W + rho^2*W^2)
-  # diag(H) = H_{ii} = diag(I_n - 2*rho*W + rho^2*W^2) = diag(I_n) + rho^2*diag(W^2)
+  # diag(H) = H_{ii} = 1/sige * diag(I_n - 2*rho*W + rho^2*W^2) 
+  #                  = 1/sige * (diag(I_n) + rho^2*diag(W^2))
   # because diag(W) = 0!
   #
   #
   if (univariateConditionals) {
     # conditional variance  z_i | z_{-i}
-    dsig <- 1/sige * (ones + rho * rho * W2diag)  # SW: Sollte es nicht ones + rho * rho * W2diag sein?
+    dsig <- 1/sige * (ones - rho * rho * W2diag)  # SW: Sollte es nicht ones + rho * rho * W2diag sein?
     zvar <- ones/dsig;            # conditional variances for each z_i | z = H_{ii}^{-1} = 1/diag(H) (n x 1)
                                   # TODO: check if sige is missing in zvar
                                   # TODO: Was passiert im Fall dsig < 0 --> zvar < 0 (negative variance) !!!
@@ -377,7 +378,8 @@ sem_probit_mcmc <- function(y, X, W, ndraw=1000, burn.in=100, thinning=1,
   results$sige  <- sige
   results$rho   <- colMeans(B)[k+2]
   results$coefficients <- colMeans(B)
-  results$fitted.values <- fitted.values
+  results$fitted.values <- fitted.values    # fitted values
+  results$fitted.reponse <- fitted.reponse  # fitted values on reponse scale (binary y variable)
   results$ndraw <- ndraw
   results$nomit <- burn.in
   results$a1        <- a1
@@ -583,5 +585,10 @@ logLik.semprobit <- function(object, ...) {
   class(out) <- "logLik"
   attr(out,"df") <- k+2                     # k parameters in beta, rho, sige
  return(out)
+}
+
+# return fitted values of SEM probit (on reponse scale vs. linear predictor scale)
+fitted.semprobit <- function(object, ...) {
+  object$fitted.value
 }
 

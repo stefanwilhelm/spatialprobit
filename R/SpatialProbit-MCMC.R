@@ -284,9 +284,8 @@ sar_probit_mcmc <- function(y, X, W, ndraw=1000, burn.in=100, thinning=1,
   colnames(indirect) <- namesNonConstantParams
     
   if (computeMarginalEffects) {
-    # Monte Carlo estimation of tr(W^i) for i = 1..o
+    # simulate Monte Carlo estimation of tr(W^i) for i = 1..o before MCMC iterations
     trW.i <- tracesWi(W, o=100, iiter=50)
-    
   }
     
   # just to set a start value for z
@@ -424,7 +423,7 @@ sar_probit_mcmc <- function(y, X, W, ndraw=1000, burn.in=100, thinning=1,
   results$rho   <- colMeans(B)[k+1]
   results$coefficients <- colMeans(B)
   results$fitted.values <- fitted.values
-  #results$fitted.reponse <- fitted.reponse  # fitted values on reponse scale (binary y variable)
+  results$fitted.reponse <- fitted.reponse  # fitted values on reponse scale (binary y variable)
   results$ndraw <- ndraw
   results$nomit <- burn.in
   results$a1        <- a1
@@ -673,6 +672,7 @@ impacts.sarprobit <- function(obj, file=NULL,
   return(invisible(list(direct=direct, indirect=indirect, total=total)))
 }
 
+# concatenate two objects of class "sarprobit"
 # c.sarprobit works in the same way as boot:::c.boot().
 c.sarprobit <- function(...) {
  args <- list(...)
@@ -756,6 +756,7 @@ plot.sarprobit <- function(x, which=c(1, 2, 3),
 }
 
 # return fitted values of SAR probit (on reponse scale vs. linear predictor scale)
+# TODO: see fitted.glm() for comparison
 fitted.sarprobit <- function(object, ...) {
   object$fitted.value
 }
