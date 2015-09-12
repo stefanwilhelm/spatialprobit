@@ -1,4 +1,5 @@
 .*Misc/*
+^users/.*
 .*docs/*
 .*CVS.*
 .*data/CVS/*

@@ -38,16 +38,19 @@ sar_tobit_mcmc(y, X, W, ndraw = 1000, burn.in = 100, thinning = 1,
 \details{
 Bayesian estimates of the spatial autoregressive Tobit model (SAR Tobit model)
 \deqn{
-  y = \rho W y + X \beta + \epsilon, \epsilon \sim N(0, \sigma^2_{e} I_n)
+  z = \rho W y + X \beta + \epsilon, \epsilon \sim N(0, \sigma^2_{e} I_n)
 }{
-  y = rho*W*y + X*beta + e, e ~ N(0,sige*I_n)
+  z = rho*W*y + X*beta + e, e ~ N(0,sige*I_n)
 }
 \deqn{
-  y = (I_n - \rho W)^{-1} X \beta + (I_n - \rho W)^{-1} \epsilon
+  z = (I_n - \rho W)^{-1} X \beta + (I_n - \rho W)^{-1} \epsilon
 }{
-  y = (I_n - rho W)^{-1} X beta + (I_n - rho W)^{-1} e
-}    
-where y \eqn{(n \times 1)}{(n x 1)} is only observed for y >= 0 and censored to 0 otherwise. 
+  z = (I_n - rho W)^{-1} X beta + (I_n - rho W)^{-1} e
+}
+\deqn{
+  y = max(z, 0)
+}
+where \eqn{y} \eqn{(n \times 1)}{(n x 1)} is only observed for \eqn{z \ge 0}{z >= 0} and censored to 0 otherwise. 
 \eqn{\beta}{beta} is a \eqn{(k \times 1)}{(k x 1)} 
 vector of parameters associated with the \eqn{(n \times k)}{(n x k)} data matrix X.
 
@@ -109,7 +112,8 @@ adapted to and optimized for R by Stefan Wilhelm <wilhelm@financial.com>
 based on Matlab code from James P. LeSage}
 
 \seealso{
-\code{\link{sar_lndet}} for computing log-determinants
+\code{\link{sarprobit}}, \code{\link{sarorderedprobit}} or \code{\link{semprobit}} 
+for SAR probit/SAR Ordered Probit/ SEM probit model fitting
 }
 
 \examples{
@@ -117,7 +121,7 @@ based on Matlab code from James P. LeSage}
 # Example from LeSage/Pace (2009), section 10.3.1, p. 302-304
 # Value of "a" is not stated in book! 
 # Assuming a=-1 which gives approx. 50% censoring
- library(spatialprobit)
+library(spatialprobit)
 
 a <- -1   # control degree of censored observation
 n <- 1000
@@ -160,5 +164,25 @@ for (i in 1:4) {
  legend("topleft", legend=c("SAR", "SAR Tobit"), col=c("red", "green"), 
    lty=1, bty="n")
 }
+
+# Fit SAR Tobit (with approx. 50\% censored observations)
+fit_sartobit <- sartobit(y ~ x,W,ndraw=1000,burn.in=0, showProgress=TRUE, 
+    computeMarginalEffects=TRUE)
+# Print SAR Tobit marginal effects
+impacts(fit_sartobit)
+#--------Marginal Effects--------
+#
+#(a) Direct effects
+#  lower_005 posterior_mean upper_095
+#x     1.013          1.092     1.176
+#
+#(b) Indirect effects
+#  lower_005 posterior_mean upper_095
+#x     2.583          2.800     3.011
+#
+#(c) Total effects
+#  lower_005 posterior_mean upper_095
+#x     3.597          3.892     4.183
+#mfx <- marginal.effects(fit_sartobit)
 }
 }
