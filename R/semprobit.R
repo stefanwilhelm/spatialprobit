@@ -358,13 +358,13 @@ sem_probit_mcmc <- function(y, X, W, ndraw=1000, burn.in=100, thinning=1,
   if (showProgress)  close(pb) #close progress bar
     
   # fitted values for estimates (based on z rather than binary y like in fitted(glm.fit))
-  # (on reponse scale y vs. linear predictor scale z...)
+  # (on response scale y vs. linear predictor scale z...)
   beta  <- colMeans(B)[1:k]
   sige  <- colMeans(B)[k+1]
   rho   <- colMeans(B)[k+2]
   S     <- (I_n - rho * W)
   fitted.values   <- X %*% beta                     # E[z | beta] = (X * beta)
-  fitted.response <- as.numeric(fitted.values >= 0) 
+  fitted.response <- as.numeric(fitted.values >= 0) # y = (z >= 0)
   # TODO: linear.predictors  vs. fitted.values
  
   # result
@@ -379,7 +379,7 @@ sem_probit_mcmc <- function(y, X, W, ndraw=1000, burn.in=100, thinning=1,
   results$rho   <- colMeans(B)[k+2]
   results$coefficients <- colMeans(B)
   results$fitted.values <- fitted.values    # fitted values
-  results$fitted.reponse <- fitted.reponse  # fitted values on reponse scale (binary y variable)
+  results$fitted.response <- fitted.response  # fitted values on reponse scale (binary y variable)
   results$ndraw <- ndraw
   results$nomit <- burn.in
   results$a1        <- a1
