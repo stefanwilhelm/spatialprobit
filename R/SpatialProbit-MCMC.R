@@ -404,7 +404,7 @@ sar_probit_mcmc <- function(y, X, W, ndraw=1000, burn.in=100, thinning=1,
   if (showProgress)  close(pb) #close progress bar
   
   # fitted values for estimates (based on z rather than binary y like in fitted(glm.fit))
-  # (on reponse scale y vs. linear predictor scale z...)
+  # (on response scale y vs. linear predictor scale z...)
   beta  <- colMeans(B)[1:k]
   rho   <- colMeans(B)[k+1]
   S     <- (I_n - rho * W)
@@ -423,7 +423,7 @@ sar_probit_mcmc <- function(y, X, W, ndraw=1000, burn.in=100, thinning=1,
   results$rho   <- colMeans(B)[k+1]
   results$coefficients <- colMeans(B)
   results$fitted.values <- fitted.values
-  results$fitted.reponse <- fitted.reponse  # fitted values on reponse scale (binary y variable)
+  results$fitted.response <- fitted.response  # fitted values on response scale (binary y variable)
   results$ndraw <- ndraw
   results$nomit <- burn.in
   results$a1        <- a1
@@ -755,8 +755,8 @@ plot.sarprobit <- function(x, which=c(1, 2, 3),
  }
 }
 
-# return fitted values of SAR probit (on reponse scale vs. linear predictor scale)
-# TODO: see fitted.glm() for comparison
+# return fitted values of SAR probit (on response scale vs. linear predictor scale)
+# TODO: see fitted.lm() for comparison
 fitted.sarprobit <- function(object, ...) {
   object$fitted.value
 }
