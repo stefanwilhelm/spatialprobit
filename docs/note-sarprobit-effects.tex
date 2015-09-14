@@ -3,8 +3,38 @@
 \usepackage{amsmath,amssymb}
 \usepackage[english]{babel}
 
-\title{Computing the marginal effects of the SAR probit}
+\title{Computing the marginal effects of the SAR probit and SAR Tobit model}
 \author{Stefan Wilhelm}
+
+% latin vector symbols
+\def\bfa{\mbox{$\boldsymbol{\mathbf{a}}$}}
+\def\bfb{\mbox{$\boldsymbol{\mathbf{b}}$}}
+\def\bfc{\mbox{$\boldsymbol{\mathbf{c}}$}}
+\def\bfu{\mbox{$\boldsymbol{\mathbf{u}}$}}
+\def\bfx{\mbox{$\boldsymbol{\mathbf{x}}$}}
+\def\bfy{\mbox{$\boldsymbol{\mathbf{y}}$}}
+\def\bfz{\mbox{$\boldsymbol{\mathbf{z}}$}}
+
+% greek vector symbols
+\def\bfbeta{\mbox{$\boldsymbol{\beta}$}}
+\def\bfepsilon{\mbox{$\boldsymbol{\epsilon}$}}
+\def\bfmu{\mbox{$\boldsymbol{\mu}$}}
+\def\bftheta{\mbox{$\boldsymbol{\theta}$}}
+
+% matrix symbols
+\def\bfZero{\mbox{$\boldsymbol{\mathbf{0}}$}}
+\def\bfA{\mbox{$\boldsymbol{\mathbf{A}}$}}
+\def\bfD{\mbox{$\boldsymbol{\mathbf{D}}$}}
+\def\bfH{\mbox{$\boldsymbol{\mathbf{H}}$}}
+\def\bfI{\mbox{$\boldsymbol{\mathbf{I}}$}}
+\def\bfL{\mbox{$\boldsymbol{\mathbf{L}}$}}
+\def\bfS{\mbox{$\boldsymbol{\mathbf{S}}$}}
+\def\bfT{\mbox{$\boldsymbol{\mathbf{T}}$}}
+\def\bfW{\mbox{$\boldsymbol{\mathbf{W}}$}}
+\def\bfX{\mbox{$\boldsymbol{\mathbf{X}}$}}
+
+\def\bfSigma{\mbox{$\boldsymbol{\Sigma}$}}
+
 
 \begin{document}
 
@@ -12,32 +42,46 @@
 
 \section{The problem}
 In this note we show how to compute the marginal effects (especially the total impacts $M_r(T)$)
-for the SAR model and its probit variant \textit{without} inverting the Matrix $S=(I_n - \rho W)$.
-We only use the $QR$ decomposition of $S$.\\
-The problem with inverting $S$ is twofold. 
-First, while $S$ is often a sparse matrix, $S^{-1}$ is not. $S^{-1}=(I_n - \rho W)^{-1}$ will be a dense
+for the SAR model and its probit variant \textit{without} inverting the Matrix $\bfS=(\bfI_n - \rho \bfW)$.
+We only use the $QR$ decomposition of $\bfS$.\\
+The problem with inverting $\bfS$ is twofold. 
+First, while $\bfS$ is often a sparse matrix, $\bfS^{-1}$ is not. $\bfS^{-1}=(\bfI_n - \rho \bfW)^{-1}$ will be a dense
 $n \times n$ matrix. For a large $n$ this may be problematic both in terms of memory consumption and speed.
-Second, matrix inversion is expensive $O(n^3)$ and we already have a $QR$ decomposition of $S$ available.
-When computing a summary measure like $S^{-1} 1_n=x$, we can well solve the system $S x = 1_n$ using the QR-decomposition
-of $S$.  
+Second, matrix inversion is expensive $O(n^3)$ and we already have a $QR$ decomposition of $\bfS$ available.
+When computing a summary measure like $\bfS^{-1} 1_n=\bfx$, we can well solve the system $\bfS \bfx = 1_n$ using the QR-decomposition
+of $\bfS$.  
 
 \section{Marginal effects in the SAR model}
 
-Changes of the level of a single variable $x_{ir}$ will impact both the outcome of the same observation $y_i$ and possibly all other
-observations $y_j$ ($j \ne i$). So the matrix of possible changes to the $r$-th variables will be
+Suppose we have the spatial autoregressive model (SAR model, spatial lag model) 
+\begin{equation}
+  \bfz = \rho \bfW \bfz + \bfX \bfbeta + \epsilon, \quad \epsilon \sim N\left(0, \sigma^2_\epsilon \bfI_n\right)
+  \label{eqn:sarprobit}
+\end{equation}
+for $\bfz = (z_1,\ldots,z_n)'$ with some fixed matrix of covariates $\bfX$ $(n \times k)$ 
+associated with the parameter vector $\bfbeta$ $(k \times 1)$. 
+The matrix $\bfW$ $(n \times n)$ is called the spatial weight matrix and 
+captures the dependence structure between neighboring observations
+such as friends or nearby locations. 
+The term $\bfW \bfz$ is a linear combination of neighboring observations.
+The scalar $\rho$ is the dependence parameter and will assumed $\text{abs}{(\rho)} < 1$.
+The $k+1$ model parameters to be estimated are the parameter vector $\bfbeta$ and the scalar $\rho$.
+
+Changes of the level of a single variable $x_{ir}$ will impact both the outcome of the same observation $z_i$ and possibly all other
+observations $z_j$ ($j \ne i$). So the matrix of possible changes to the $r$-th variables will be
 \begin{eqnarray}
-E(\partial y / \partial x'_r) & = & (I_n - \rho W)^{-1} I_n \beta_r \\
-                              & = & S_r(W) \nonumber
+E(\partial y / \partial x'_r) & = & (\bfI_n - \rho \bfW)^{-1} I_n \beta_r \\
+                              & = & S_r(\bfW) \nonumber
 \end{eqnarray}
 which is a $n \times n$ matrix.
 
 See \cite{LeSage2009}, section 5.6.2., p.149/150 for spatial effects estimation in MCMC. They propose three scalar summary
 measures of the spatial spillovers:
 \begin{itemize}
-\item average direct impacts: $M_r(D) = n^{-1} tr(S_r(W))$      \\
-Efficient approaches for computing the trace of $S_r(W)$ are available, see \cite{LeSage2009} chapter 4, pp.114/115.
-\item average total impacts: $M_r(T) = n^{-1} 1'_n S_r(W) 1_n$  \\
- The problem with the total effects is that the matrix $S_r(W)$ is a dense $n \times n$ matrix! 
+\item average direct impacts: $M_r(D) = n^{-1} tr(S_r(\bfW))$      \\
+Efficient approaches for computing the trace of $S_r(\bfW)$ are available, see \cite{LeSage2009} chapter 4, pp.114/115.
+\item average total impacts: $M_r(T) = n^{-1} 1'_n S_r(\bfW) 1_n$  \\
+ The problem with the total effects is that the matrix $S_r(\bfW)$ is a dense $n \times n$ matrix! 
  For large $n$ this will run into storage problems.
 \item average indirect impacts: $M_r(I) = M_r(T) - M_r(D)$\\
  The indirect impacts are directly linked to the total effects, so they may also suffer from the same problems.
@@ -49,29 +93,71 @@ Efficient approaches for computing the trace of $S_r(W)$ are available, see \cit
 See \cite{LeSage2009}, section 10.1.6, p.\,293 for marginal effects in SAR probit.
 For the change in $\beta_r$ we have the $n \times n$ effects matrix
 \begin{eqnarray}
- \partial E[y | x_r] / \partial x'_r & = & \phi(S^{-1} I_n \bar{x}_r \beta_r) \odot S^{-1} I_n \beta_r \\
-                                     & = & \phi(\mu) \odot S^{-1} I_n \beta_r \nonumber \\
-                                     & = & D \cdot S^{-1} \cdot \beta_r \nonumber \\
-                                     & = & S_r(W) \nonumber  
+ \partial E[y | x_r] / \partial x'_r & = & \phi(\bfS^{-1} \bfI_n \bar{x}_r \beta_r) \odot \bfS^{-1} \bfI_n \beta_r \\
+                                     & = & \phi(\mu) \odot \bfS^{-1} I_n \beta_r \nonumber \\
+                                     & = & \bfD \cdot \bfS^{-1} \cdot \beta_r \nonumber \\
+                                     & = & S_r(\bfW) \nonumber  
 \end{eqnarray}
-where $D$ is the diagonal matrix containing $\phi(\mu)$.\\
+where $\bfD$ is the diagonal matrix containing $\phi(\mu)$.\\
 \par
 We are already solving the equation 
 \begin{equation}
-  (I_n - \rho W) \mu = S \mu = X \beta \nonumber
+  (\bfI_n - \rho \bfW) \mu = \bfS \mu = \bfX \bfbeta \nonumber
 \end{equation}   
 for $\mu$ using the QR-decomposition of $S$
-(as opposed to inverting $S$ as in $\mu = S^{-1} X \beta = (I_n -  \rho W)^{-1} X \beta$),
-so we have the QR decomposition of $S$ ready for the calculation of the total effects estimates.
+(as opposed to inverting $\bfS$ as in $\mu = \bfS^{-1} \bfX \bfbeta = (\bfI_n -  \rho \bfW)^{-1} \bfX \bfbeta$),
+so we have the QR decomposition of $\bfS$ ready for the calculation of the total effects estimates.
 
 We rewrite the average total effects as
 \begin{eqnarray}
-\text{average total effects} & = & n^{-1} 1_n' (D S^{-1} \cdot \beta_r) 1_n \\
-                             & = & n^{-1} 1_n' (D x) \cdot \beta_r \nonumber \\
-                             & = & \text{mean}(D x) \cdot \beta_r \nonumber
+\text{average total effects} & = & n^{-1} 1_n' (\bfD \bfS^{-1} \cdot \beta_r) 1_n \\
+                             & = & n^{-1} 1_n' (\bfD \bfx) \cdot \beta_r \nonumber \\
+                             & = & \text{mean}(\bfD \bfx) \cdot \beta_r \nonumber
 \end{eqnarray}
-where $x$ is the solution of $S x = 1_n$, obtained from the QR-decompositon
-of S. The average total effects is then the mean of $(D x) \cdot \beta_r$, which can be furthermore done for all $\beta_r$ in one operation.
+where $\bfx$ is the solution of $\bfS \bfx = 1_n$, obtained from the QR-decompositon
+of $\bfS$. The average total effects is then the mean of $(\bfD \bfx) \cdot \beta_r$, which can be furthermore done for all $\beta_r$ in one operation.
+
+\section{Marginal effects in the SAR Tobit model}
+
+\subsection{Marginal effects in the non-spatial Tobit model}
+
+The non-spatial Tobit model can be written as
+\begin{eqnarray}
+  y^{*} & = & \bfx \bfbeta + \epsilon, \quad \epsilon | \bfx \sim N(0, \sigma^2) \\
+	y     & = & \max(0, y^{*})\\
+	      & = & \left\{ 
+	              \begin{array}{cc}
+								  y^{*} & \text{ if } y^{*} \ge 0  \\
+									0 & \text{ if } y^{*} < 0
+								\end{array}
+	            \right.
+%\label{eq:standard-tobit}
+\end{eqnarray}
+
+According to \cite{Wooldridge2010}, eqn (17.16), p.\,674 the marginal effect is
+\begin{eqnarray}
+ \partial E[y | \bfx ] / \partial x'_r & = & \Phi(\bfx \bfbeta / \sigma) \beta_r
+\end{eqnarray}
+
+\subsection{Marginal effects in the spatial Tobit model}
+
+In \cite{LeSage2009}, section 10.3, the spatial Tobit model is described as
+\begin{eqnarray}
+  y^{*} & = & (\bfI_n - \rho \bfW)^{-1} \bfX \bfbeta + (\bfI_n - \rho \bfW)^{-1} \epsilon, \quad \epsilon | \bfx \sim N(0, \sigma^2) \\
+	y     & = & \max(0, y^{*})\\
+	      & = & \left\{ 
+	              \begin{array}{cc}
+								  y^{*} & \text{ if } y^{*} \ge 0  \\
+									0 & \text{ if } y^{*} < 0
+								\end{array}
+	            \right. \\
+	\bfS     & = & \bfI_n - \rho \bfW 
+\end{eqnarray}
+
+Proposition:
+\begin{eqnarray}
+\partial E[y | x_r] / \partial x'_r & = & \Phi(\bfS^{-1} \bfI_n \bar{x}_r \beta_r / \sigma) \odot \bfS^{-1} \bfI_n \beta_r
+\end{eqnarray}
 
 \bibliographystyle{abbrvnat}
 \bibliography{spatialprobit}
