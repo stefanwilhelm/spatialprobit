@@ -350,6 +350,10 @@ sar_tobit_mcmc <- function(y, X, W, ndraw=1000, burn.in=100, thinning=1,
   sige  <- colMeans(B)[k+1]
   rho   <- colMeans(B)[k+2]
   
+  S     <- (I_n - rho * W)
+  fitted.values   <- solve(qr(S), X %*% beta) # E[z | beta] = (I_n - rho * W)^{-1}(X * beta)
+  fitted.response <- pmax(fitted.values, 0)   # y = max(z, 0)
+  
   # result
   results       <- NULL
   results$time  <- Sys.time() - timet
@@ -361,8 +365,8 @@ sar_tobit_mcmc <- function(y, X, W, ndraw=1000, burn.in=100, thinning=1,
   results$sige  <- colMeans(B)[k+1]
   results$rho   <- colMeans(B)[k+2]
   results$coefficients <- colMeans(B)
-  results$fitted.values <- fitted.values
-  #results$fitted.reponse <- fitted.reponse  # fitted values on reponse scale (binary y variable)
+  results$fitted.values   <- fitted.values    # E[z | beta]
+  results$fitted.response <- fitted.response  # fitted values on response scale (censored y variable)
   results$ndraw <- ndraw
   results$nomit <- burn.in
   results$a1        <- a1
@@ -656,4 +660,9 @@ plot.sartobit <- function(x, which=c(1, 2, 3),
      if (!is.null(trueparam)) abline(v=trueparam[i], col="red", lty=2)
    }
  }
+}
+
+# return fitted values of SAR Tobit
+fitted.sartobit <- function(object, ...) {
+  object$fitted.value
 }
