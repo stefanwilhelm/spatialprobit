@@ -94,16 +94,16 @@ sar_eigs <- function(eflag, W){
 # Code is now based on method spdep::do_ldet written by Roger Bivand
 # ldetflag = 0 : Pace and Barry (1997) grid
 # Pace, R. and Barry, R. (1997). Quick computation of spatial autoregressive estimators.
-# Geographics Analysis, 29(3):232–247.
+# Geographics Analysis, 29(3):232-247.
 #
 # ldetflag = 1 : Pace and LeSage (2004) Chebyshev approximation
 # Pace, R. and LeSage, J. (2004). Chebyshev approximation of log-determinants of
-# spatial weight matrices. Computational Statistics & Data Analysis, 45(2):179–
+# spatial weight matrices. Computational Statistics & Data Analysis, 45(2):179-
 # 196.
 #
 # ldetflag = 2 : Barry and Pace (1999) MC approximation
 # Barry, R. and Pace, R. (1999). Monte Carlo estimates of the log determinant of
-# large sparse matrices. Linear Algebra and its Applications, 289(1-3):41–54.
+# large sparse matrices. Linear Algebra and its Applications, 289(1-3):41-54.
 sar_lndet <- function(ldetflag,W,rmin,rmax){
   results       <- NULL
   env <- new.env(parent=globalenv())
