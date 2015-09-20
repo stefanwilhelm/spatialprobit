@@ -137,8 +137,13 @@ I_n <- sparseMatrix(i=1:n, j=1:n, x=1)
 m <- 6
 
 # spatial weight matrix with m=6 nearest neighbors
-W <- sparseMatrix(i=rep(1:n, each=m), 
-  j=replicate(n, sample(x=1:n, size=m, replace=FALSE)), x=1/m, dims=c(n, n))
+# W must not have non-zeros in the main diagonal!
+i <- rep(1:n, each=m)
+j <- rep(NA, n * m)
+for (k in 1:n) {
+  j[(((k-1)*m)+1):(k*m)] <- sample(x=(1:n)[-k], size=m, replace=FALSE)
+}
+W <- sparseMatrix(i, j, x=1/m, dims=c(n, n))
 
 # innovations
 eps <- sqrt(sige)*rnorm(n=n, mean=0, sd=1)

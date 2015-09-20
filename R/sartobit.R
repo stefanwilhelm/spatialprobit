@@ -352,7 +352,7 @@ sar_tobit_mcmc <- function(y, X, W, ndraw=1000, burn.in=100, thinning=1,
   
   S     <- (I_n - rho * W)
   fitted.values   <- solve(qr(S), X %*% beta) # E[z | beta] = (I_n - rho * W)^{-1}(X * beta)
-  fitted.response <- pmax(fitted.values, 0)   # y = max(z, 0)
+  fitted.response <- pmax(as.numeric(fitted.values), 0)   # y = max(z, 0)
   
   # result
   results       <- NULL
