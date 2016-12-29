@@ -4,3 +4,5 @@
 .*CVS.*
 ^data/CVS*
 ^tests/.*
+^.*\.Rproj$
+^\.Rproj\.user$

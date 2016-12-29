@@ -1,6 +1,6 @@
 library(spatialprobit)
-source("../R/sem.R")
-source("../R/rtnorm.R")
+source("sem.R")
+source("rtnorm.R")
 
 ################################################################################
 #
@@ -8,9 +8,9 @@ source("../R/rtnorm.R")
 #
 ################################################################################
 
-# W-matrix from Anselin's neigbhorhood crime data set (see C:/Projects/MATLAB/jplv7/data/anselin.dat)
+# W-matrix from Anselin's neigbhorhood crime data set
 # n=49
-anselin <- read.csv("data/anselin.dat", sep="",
+anselin <- read.csv("C:/Projects/MATLAB/jplv7/data/anselin.dat", sep="",
   header=FALSE, col.names=c("crime","income","hvalue","lat","long"))
 latt <- anselin[,4]
 long <- anselin[,5]
