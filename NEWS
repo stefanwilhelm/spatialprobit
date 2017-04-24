@@ -1,5 +1,8 @@
 User visible changes in spatialprobit package
 
+changes in spatialprobit 0.9-12 (2016-05-18)
+# Added logLik() function for SAR Tobit, which can be used for model comparison and selection, e.g. AIC() (requested by Roberto Basile)
+
 changes in spatialprobit 0.9-11 (2015-09-12)
 # Fixed a bug in SEM probit which caused NAs
 # Added marginal effects estimation for spatial Tobit model (marginal.effects.sartobit())
