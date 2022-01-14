@@ -10,5 +10,5 @@ Encoding: latin1
 Suggests: RUnit, testthat
 Description: Bayesian Estimation of Spatial Probit and Tobit Models.
 License: GPL (>= 2)
-URL: http://www.r-project.org
+URL: https://www.r-project.org
 NeedsCompilation: no

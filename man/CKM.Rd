@@ -46,7 +46,7 @@
   from built from adjacency matrices \code{A1},\code{A2},\code{A3}.
 }
 \details{
-The description of the data set from \url{http://moreno.ss.uci.edu/data.html#ckm}:
+The description of the data set from a UCI website (previous link is invalid now):
 
 This data set was prepared by Ron Burt. 
 He dug out the 1966 data collected by Coleman, Katz and Menzel on medical innovation. 
