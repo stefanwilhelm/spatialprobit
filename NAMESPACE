@@ -2,7 +2,14 @@ import(stats)
 import(mvtnorm)
 import(tmvtnorm)
 import(Matrix)
-import(spdep)
+if (packageVersion("spdep") < 1.2) {
+  import(spdep, except=c("impacts", "SE_classic_setup", "cheb_setup",
+     "do_ldet",  "mcdet_setup"))
+} else {
+  import(spdep)
+  #importFrom(spdep, mat2listw, nb2listw, knearneigh, logLik.sarlm)
+}
+importFrom(spatialreg, impacts, SE_classic_setup, cheb_setup, do_ldet, mcdet_setup)
 importFrom("grDevices", "dev.interactive", "devAskNewPage")
 importFrom("graphics", "abline", "par", "plot")
 importFrom("utils", "setTxtProgressBar", "txtProgressBar")

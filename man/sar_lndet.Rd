@@ -27,7 +27,7 @@ lndetChebyshev(W, rmin, rmax)
 
 \details{
 This method will no longer provide its own implementation and 
-will use the already existing methods in the package \pkg{spdep} (\link[spdep]{do_ldet}).
+will use the already existing methods in the package \pkg{spatialreg} (\link[spatialreg]{do_ldet}).
 
 \code{ldetflag=0} will compute the exact log-determinant at some gridpoints, whereas
 \code{ldetflag=1} will compute the Chebyshev log-determinant approximation.
@@ -51,7 +51,7 @@ log-determinant method.
 }
 
 \seealso{
- \link[spdep]{do_ldet} for computation of log-determinants
+ \link[spatialreg]{do_ldet} for computation of log-determinants
 }
 
 \references{

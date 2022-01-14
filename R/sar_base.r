@@ -91,7 +91,7 @@ sar_eigs <- function(eflag, W){
 # USAGE: detval = sar_lndet(lflag,W,rmin,rmax)
 # where ldetflag,rmin,rmax,W contains input flags 
 # ---------------------------------------------------
-# Code is now based on method spdep::do_ldet written by Roger Bivand
+# Code is now based on method spatialreg::do_ldet written by Roger Bivand
 # ldetflag = 0 : Pace and Barry (1997) grid
 # Pace, R. and Barry, R. (1997). Quick computation of spatial autoregressive estimators.
 # Geographics Analysis, 29(3):232-247.
