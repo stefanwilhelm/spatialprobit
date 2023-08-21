@@ -202,7 +202,7 @@ Do you specialize in any particular field of medicine? [if yes] What is it?
 }
 
 \source{
-The data set is reproduced from \url{http://moreno.ss.uci.edu/data.html#ckm}
+The data set had been reproduced from the now invalid \code{http://moreno.ss.uci.edu/data.html#ckm}
 with the friendly permission of Prof. Lin Freeman.
 }
 
