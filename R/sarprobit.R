@@ -18,17 +18,17 @@ if (FALSE) {
  source("utility_functions.r") 
 }
 
-# estimated tr(W^i) for i=1,...,100
-# see LeSage (2009), chapter 4, p.97/98
-#
-# "The expectation of the quadratic form u'Au equals tr(A).
-#  Since u_i^2 follows a chi^2 distribution with one degree of freedom."
-# Pre-calculate traces tr(W^i) i=1,...,100 for the x-impacts calculations
-#
-# @param W spatial weight matrix (n x n)
-# @param o highest order of W^i = W^o
-# @param iiter number of MCMC iterations (we run this 50 times)
-# @return (n x o) matrix with tr(W^i) in each column, for i=1..,o
+#' estimated tr(W^i) for i=1,...,100
+#' see LeSage (2009), chapter 4, p.97/98
+#'
+#' "The expectation of the quadratic form u'Au equals tr(A).
+#'  Since u_i^2 follows a chi^2 distribution with one degree of freedom."
+#' Pre-calculate traces tr(W^i) i=1,...,100 for the x-impacts calculations
+#'
+#' @param W spatial weight matrix (n x n)
+#' @param o highest order of W^i = W^o
+#' @param iiter number of MCMC iterations (we run this 50 times)
+#' @return (n x o) matrix with tr(W^i) in each column, for i=1..,o
 tracesWi <- function(W, o=100, iiter=50) {
   n <- nrow(W)
   trW_i <- matrix( data=0, nrow=n, ncol=o )   # n x o
@@ -89,9 +89,12 @@ draw_rho <- function (rho_grid, lndet, rho_gridsq, yy, epe0, eped, epe0d,
     return(results)
 }
 
-# Bayesian estimation of SAR probit model
-#
-# @param formula 
+#' Bayesian estimation of SAR probit model
+#'
+#' @param formula
+#' @param W spatial weights matrix
+#' @param data
+#' @param subset
 sarprobit <- function(formula, W, data, subset, ...) {
   cl <- match.call()                     # cl ist object of class "call"
   mf <- match.call(expand.dots = FALSE)  # mf ist object of class "call"
@@ -121,28 +124,28 @@ update_I_rW <- function(S, ind, rho, W) {
   return(S)
 }
 
-# Estimate the spatial autoregressive probit model (SAR probit)
-# z = rho * W * z + X \beta + epsilon
-# where y = 1 if z >= 0 and y = 0 if z < 0 observable
-#
-# @param y
-# @param X
-# @param W spatial weight matrix
-# @param ndraw number of MCMC iterations
-# @param burn.in  number of MCMC burn-in to be discarded
-# @param thinning MCMC thinning factor, defaults to 1
-# @param m number of burn.in sampling in inner Gibbs sampling
-# @param prior list of prior settings: 
-#   prior$rho ~ Beta(a1,a2); 
-#   prior$beta ~ N(c, T)
-#   prior$lflag   
-# lflag=0 --> default to 1997 Pace and Barry grid approach
-# lflag=1 --> Pace and LeSage (2004) Chebyshev approximation
-# lflag=2 --> Barry and Pace (1999) MC determinant approx
-# @param start
-# @param m
-# @param computeMarginalEffects
-# @param showProgress
+#' Estimate the spatial autoregressive probit model (SAR probit)
+#' z = rho * W * z + X \beta + epsilon
+#' where y = 1 if z >= 0 and y = 0 if z < 0 observable
+#'
+#' @param y
+#' @param X
+#' @param W spatial weight matrix
+#' @param ndraw number of MCMC iterations
+#' @param burn.in  number of MCMC burn-in to be discarded
+#' @param thinning MCMC thinning factor, defaults to 1
+#' @param m number of burn.in sampling in inner Gibbs sampling
+#' @param prior list of prior settings: 
+#'   prior$rho ~ Beta(a1,a2); 
+#'   prior$beta ~ N(c, T)
+#'   prior$lflag   
+#' lflag=0 --> default to 1997 Pace and Barry grid approach
+#' lflag=1 --> Pace and LeSage (2004) Chebyshev approximation
+#' lflag=2 --> Barry and Pace (1999) MC determinant approx
+#' @param start
+#' @param m
+#' @param computeMarginalEffects
+#' @param showProgress
 sar_probit_mcmc <- function(y, X, W, ndraw=1000, burn.in=100, thinning=1, 
   prior=list(a1=1, a2=1, c=rep(0, ncol(X)), T=diag(ncol(X))*1e12, lflag = 0), 
   start=list(rho=0.75, beta=rep(0, ncol(X))),
@@ -204,8 +207,8 @@ sar_probit_mcmc <- function(y, X, W, ndraw=1000, burn.in=100, thinning=1,
   if (class(W) == "dgCMatrix") {
    I <- sparseMatrix(i=1:n,j=1:n,x=Inf)
    S <- (I - rho * W)
-   ind  <- which(is.infinite(S@x))  # Stellen an denen wir 1 einsetzen müssen (I_n)
-   ind2 <- which(!is.infinite(S@x))  # Stellen an denen wir -rho*W einsetzen müssen
+   ind  <- which(is.infinite(S@x))  # Stellen an denen wir 1 einsetzen m?ssen (I_n)
+   ind2 <- which(!is.infinite(S@x))  # Stellen an denen wir -rho*W einsetzen m?ssen
    S@x[ind] <- 1
   } else {
    S <- I_n - rho * W
@@ -453,8 +456,11 @@ sar_probit_mcmc <- function(y, X, W, ndraw=1000, burn.in=100, thinning=1,
 marginal.effects <- function (object, ...) 
  UseMethod("marginal.effects")
 
-# compute marginal effects for every MCMC iteration of the 
-# estimated SAR probit model
+#' compute marginal effects for every MCMC iteration of the 
+#' estimated SAR probit model
+#' 
+#' @param object fitted model object
+#' @param o maximum value for the power \eqn{tr(W^i), i=1,...,o} to be estimated
 marginal.effects.sarprobit <- function(object, o=100, ...) {
   # check for class "sarprobit"
   if (!inherits(object, "sarprobit")) 
@@ -567,7 +573,11 @@ marginal.effects.sarprobit <- function(object, o=100, ...) {
   ) 
 }
 
-# summary method for class "sarprobit"
+#' summary method for class "sarprobit"
+#' @param object fitted model object
+#' @param var_names vector with names for the parameters under analysis
+#' @param file file name to be printed. If NULL or "" then print to console.
+#' @param digits integer, used for number formatting with signif() (for summary.default) or format() (for summary.data.frame).
 summary.sarprobit <- function(object, var_names=NULL, file=NULL, 
   digits = max(3, getOption("digits")-3), ...){
   # check for class "sarprobit"
@@ -693,26 +703,30 @@ c.sarprobit <- function(...) {
 }
 
 
-# extract the coefficients
+#' extract the SAR Probit model coefficients
+#'
+#' @param object fitted model object of class "sarprobit"
 coef.sarprobit <- function(object, ...) {
  if (!inherits(object, "sarprobit")) 
         stop("use only with \"sarprobit\" objects")
  return(object$coefficients)
 }
 
-# extract the coefficients
+# extract the SAR Probit model coefficients
+#
+#' @param object fitted model object of class "sarprobit"
 coefficients.sarprobit <- function(object, ...) {
  UseMethod("coef", object)
 }
 
-# plot MCMC results for class "sarprobit" (draft version);
-# diagnostic plots for results (trace plots, ACF, posterior density function)
-# method is very similar to plot.lm()
-#
-# @param x
-# @param which
-# @param ask
-# @param trueparam a vector of "true" parameter values to be marked in posterior density plot
+#' plot MCMC results for class "sarprobit" (draft version);
+#' diagnostic plots for results (trace plots, ACF, posterior density function)
+#' method is very similar to plot.lm()
+#'
+#' @param x
+#' @param which
+#' @param ask
+#' @param trueparam a vector of "true" parameter values to be marked in posterior density plot
 plot.sarprobit <- function(x, which=c(1, 2, 3), 
   ask = prod(par("mfcol")) < length(which) && dev.interactive(), ..., trueparam=NULL) {
  if (!inherits(x, "sarprobit")) 
@@ -755,16 +769,18 @@ plot.sarprobit <- function(x, which=c(1, 2, 3),
  }
 }
 
-# return fitted values of SAR probit (on response scale vs. linear predictor scale)
-# TODO: see fitted.lm() for comparison
+#' return fitted values of SAR probit (on response scale vs. linear predictor scale)
+#' TODO: see fitted.lm() for comparison
 fitted.sarprobit <- function(object, ...) {
   object$fitted.value
 }
 
-# Extract Log-Likelihood; see logLik.glm() for comparison
-# Method returns object of class "logLik" with at least one attribute "df"
-# giving the number of (estimated) parameters in the model.
-# see Marsh (2000) equation (2.8), p.27 
+#' Extract Log-Likelihood; see logLik.glm() for comparison
+#' Method returns object of class "logLik" with at least one attribute "df"
+#' giving the number of (estimated) parameters in the model.
+#' see Marsh (2000) equation (2.8), p.27
+#' @param object
+#' @return log-likelihood 
 logLik.sarprobit <- function(object, ...) {
   X <- object$X
   y <- object$y

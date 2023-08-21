@@ -1,33 +1,38 @@
-User visible changes in spatialprobit package
+# User visible changes in spatialprobit package
 
-changes in spatialprobit 1.0 (2022-01-14)
+## changes in spatialprobit 1.0.1 (2023-08-21)
+* `if (packageVersion("spdep") < "1.2")` replaces the former numeric version numbering 1.2 with a suitable character version "1.2", 
+so numeric_version() and package_version() work properly (see also https://bugs.r-project.org/show_bug.cgi?id=18548)
+* Marked Katrina data set URL as invalid URL.
+
+## changes in spatialprobit 1.0 (2022-01-14)
 * Corrected dependencies to Roger Bivand's packages "spdep" and "spatialreg"
 
-changes in spatialprobit 0.9-12 (2016-05-18)
+## changes in spatialprobit 0.9-12 (2016-05-18)
 * Added logLik() function for SAR Tobit, which can be used for model comparison and selection, e.g. AIC() (requested by Roberto Basile)
 
-changes in spatialprobit 0.9-11 (2015-09-12)
+## changes in spatialprobit 0.9-11 (2015-09-12)
 * Fixed a bug in SEM probit which caused NAs
 * Added marginal effects estimation for spatial Tobit model (marginal.effects.sartobit())
 * Added fitted() method for sartobit, sarorderedprobit, sarprobit and semprobit
 * Fixed problems from CRAN check results: https://cran.r-project.org/web/checks/check_results_spatialprobit.html
 
-changes in spatialprobit 0.9-10 (2014-04-28)
+## changes in spatialprobit 0.9-10 (2014-04-28)
 * Fixed a bug with the SAR probit total effects (thanks to Virgilio.Gomez@uclm.es)
 * Added estimation of SAR ordered probit (sarorderedprobit())
 
-changes in spatialprobit 0.9-9 (2013-06-03)
+## changes in spatialprobit 0.9-9 (2013-06-03)
 * Added some checks on the input parameters in sarprobit(). Matrix W must not have non-zeros in the main diagonal.
 
-changes in spatialprobit 0.9-8 (2013-03-01)
+## changes in spatialprobit 0.9-8 (2013-03-01)
 * 25% performance optimization in sarprobit()
 * Added logLik() function for sarprobit() and semprobit() fit
 * Removed dependency on akima package
 
-changes in spatialprobit 0.9-7 (2013-02-15)
+## changes in spatialprobit 0.9-7 (2013-02-15)
 * Bugfix in number of rho gridpoints (do_ldet() gives 2000 gridpoints instead of 2001).
 
-changes in spatialprobit 0.9-6 (2013-02-15)
+## changes in spatialprobit 0.9-6 (2013-02-15)
 * Added Bayesian estimation of the spatial error probit model (SEM probit; semprobit())
 * Added Bayesian estimation of the spatial autoregressive Tobit model (SAR Tobit; sartobit())
 * Added LeSagePaceExperiment() function for replication of tables in LeSage and Pace (2009), section 10.1.5
@@ -39,17 +44,17 @@ changes in spatialprobit 0.9-6 (2013-02-15)
 * Added impacts() function for printing the average total, average direct and average indirect effects
 * Use of deprecated {as.,is.,}real() functions replaced by {as.,is.,}double()
 
-changes in spatialprobit 0.9-3 (2012-07-05)
-# data set CKM "Innovation among physicians" added (Coles, Katz, Mendelsohn)
-# added method marginal.effects()/marginal.effects.sarprobit() for computing average direct, indirect and total impacts.
+## changes in spatialprobit 0.9-3 (2012-07-05)
+* data set CKM "Innovation among physicians" added (Coles, Katz, Mendelsohn)
+* added method marginal.effects()/marginal.effects.sarprobit() for computing average direct, indirect and total impacts.
 
-changes in spatialprobit 0.9-2 (2012-05-21)
-# Export c.sarprobit() method for parallelization
-# Return value for method summary.sarprobit()
+## changes in spatialprobit 0.9-2 (2012-05-21)
+* Export c.sarprobit() method for parallelization
+* Return value for method summary.sarprobit()
 
-changes in spatialprobit 0.9-1 (2012-02-19)
-# first CRAN version
-# added method sarprobit() with formula / model.frame support
+## changes in spatialprobit 0.9-1 (2012-02-19)
+* first CRAN version
+* added method sarprobit() with formula / model.frame support
 
 changes in spatialprobit 0.2 (2012-01-28)
 # Added c.sarprobit() method for parallelization

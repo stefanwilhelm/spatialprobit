@@ -2,7 +2,7 @@ import(stats)
 import(mvtnorm)
 import(tmvtnorm)
 import(Matrix)
-if (packageVersion("spdep") < 1.2) {
+if (packageVersion("spdep") < "1.2") {
   import(spdep, except=c("impacts", "SE_classic_setup", "cheb_setup",
      "do_ldet",  "mcdet_setup"))
 } else {
