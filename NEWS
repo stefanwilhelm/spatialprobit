@@ -4,6 +4,7 @@
 * `if (packageVersion("spdep") < "1.2")` replaces the former numeric version numbering 1.2 with a suitable character version "1.2", 
 so numeric_version() and package_version() work properly (see also https://bugs.r-project.org/show_bug.cgi?id=18548)
 * Marked Katrina data set URL as invalid URL.
+* Replaced `class(W) == "dgCMatrix"` check with `inherits(W, "dgCMatrix")` to avoid NOTEs
 
 ## changes in spatialprobit 1.0 (2022-01-14)
 * Corrected dependencies to Roger Bivand's packages "spdep" and "spatialreg"

@@ -207,7 +207,7 @@ sar_probit_mcmc <- function(y, X, W, ndraw=1000, burn.in=100, thinning=1,
   Tinv <- solve(T)           # T^{-1}
   
   # prepare computation of (I_n - rho * W)
-  if (class(W) == "dgCMatrix") {
+  if (inherits(W, "dgCMatrix")) {
    I <- sparseMatrix(i=1:n,j=1:n,x=Inf)
    S <- (I - rho * W)
    ind  <- which(is.infinite(S@x))  # Stellen an denen wir 1 einsetzen m?ssen (I_n)
