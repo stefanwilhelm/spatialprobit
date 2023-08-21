@@ -81,7 +81,7 @@ Returns a structure of class \code{sarprobit}:
 \item{coefficients }{ posterior mean of coefficients }
 \item{fitted.values }{ fitted values }
 \item{fitted.reponse }{ fitted reponse }
-\item{ndraw }{ \# of draws }
+\item{ndraw }{ # of draws }
 \item{bdraw }{ beta draws (ndraw-nomit x nvar) }
 \item{pdraw }{ rho  draws (ndraw-nomit x 1) }
 \item{phidraw }{ phi  draws (ndraw-nomit x 1) }

@@ -79,7 +79,7 @@ So this is not a bug, its a feature.
 
 \source{
 The raw data was obtained from the Journal of the Royal Statistical Society dataset website
-(currently: \url{https://rss.onlinelibrary.wiley.com/pb-assets/hub-assets/rss/Datasets/})
+(was: \code{https://rss.onlinelibrary.wiley.com/pb-assets/hub-assets/rss/Datasets/})
 and brought to RData format.
 }
 

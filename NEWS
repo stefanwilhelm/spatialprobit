@@ -5,6 +5,7 @@
 so numeric_version() and package_version() work properly (see also https://bugs.r-project.org/show_bug.cgi?id=18548)
 * Marked Katrina data set URL as invalid URL.
 * Replaced `class(W) == "dgCMatrix"` check with `inherits(W, "dgCMatrix")` to avoid NOTEs
+* Changed package encoding to UTF-8
 
 ## changes in spatialprobit 1.0 (2022-01-14)
 * Corrected dependencies to Roger Bivand's packages "spdep" and "spatialreg"
@@ -57,11 +58,11 @@ so numeric_version() and package_version() work properly (see also https://bugs.
 * first CRAN version
 * added method sarprobit() with formula / model.frame support
 
-changes in spatialprobit 0.2 (2012-01-28)
-# Added c.sarprobit() method for parallelization
-# added showProgress=FALSE as default.
-# Added estimation of direct impacts (total impacts and indirect impacts still to do)
-# Removed dependency on package "pracma"
+## changes in spatialprobit 0.2 (2012-01-28)
+* Added c.sarprobit() method for parallelization
+* added showProgress=FALSE as default.
+* Added estimation of direct impacts (total impacts and indirect impacts still to do)
+* Removed dependency on package "pracma"
 
-changes in spatialprobit 0.1 (2012-01-17)
-# Bayesian estimation of the SAR probit model
+## changes in spatialprobit 0.1 (2012-01-17)
+* Bayesian estimation of the SAR probit model

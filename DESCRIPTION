@@ -6,7 +6,7 @@ Author: Stefan Wilhelm <wilhelm@financial.com> and Miguel Godinho de Matos <migu
 Maintainer: Stefan Wilhelm <wilhelm@financial.com>
 Imports: stats
 Depends: R (>= 1.9.0), Matrix, spdep (>= 1.1-1), spatialreg (>= 1.1-1), mvtnorm, tmvtnorm
-Encoding: latin1
+Encoding: UTF-8
 Suggests: RUnit, testthat
 Description: Bayesian Estimation of Spatial Probit and Tobit Models.
 License: GPL (>= 2)
