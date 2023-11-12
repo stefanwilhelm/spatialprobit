@@ -20,8 +20,8 @@
 # 2. What is the difference for drawing rho if any?
 # 3. Is there any change required for the marginal effects / impacts() method?
 # 4. Summary method for class "sarprobit" anpassen? JA wegen phi und wegen #0 und #1 values (vs. table of y)
-# 5. Guten Default Wert für phi überlegen...
-# 6. Impacts() überlegen
+# 5. Guten Default Wert fÃ¼r phi Ã¼berlegen...
+# 6. Impacts() Ã¼berlegen
 #
 # Bayesian estimation of the SAR Ordered Probit model
 #
@@ -179,7 +179,7 @@ AA    <- solve(xpx + Tinv)    # (X'X + T^{-1})^{-1}
 
 
 # MCMC parameters
-params <- (k+1) + (J-1)            # parameters beta (k), rho (1), (J-1) cut parameters phi, aber nur (J-2) zu schätzen
+params <- (k+1) + (J-1)            # parameters beta (k), rho (1), (J-1) cut parameters phi, aber nur (J-2) zu schÃ¤tzen
 # matrix to store the beta + rho parameters for each iteration/draw
 B <- matrix(NA, ndraw, params)
 colnames(B) <- c(paste("beta_", 1:k, sep=""), "rho", paste("y>=", 2:J, sep=""))

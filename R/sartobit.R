@@ -328,7 +328,7 @@ sar_tobit_mcmc <- function(y, X, W, ndraw=1000, burn.in=100, thinning=1,
         # indirect: M_r(I) = M_r(T) - M_r(D)
         
         # Marginal effects in SAR Tobit
-        probz <- pnorm(as.numeric(mu) / sige)     # Phi(Xß/sigma) = Prob(z <= Xß/sigma)
+        probz <- pnorm(as.numeric(mu) / sige)     # Phi(XÃŸ/sigma) = Prob(z <= XÃŸ/sigma)
         dd <- sparseMatrix(i = 1:n, j = 1:n, x = probz)
         dir <- as.double(t(probz) %*% trW.i %*% rhovec/n)
         avg_direct <- dir * beff
@@ -543,7 +543,7 @@ marginal.effects.sartobit <- function (object, o = 100, ...) {
         QR <- qr(S)
         mu <- qr.coef(QR, X %*% beta)
         rhovec <- rho^(0:(o - 1))
-        probz <- pnorm(as.numeric(mu) / sigma)     # Phi(Xß/sigma) = Prob(z <= Xß/sigma)
+        probz <- pnorm(as.numeric(mu) / sigma)     # Phi(XÃŸ/sigma) = Prob(z <= XÃŸ/sigma)
         dd <- sparseMatrix(i = 1:nobs, j = 1:nobs, x = probz)
         dir <- as.double(t(probz) %*% trW.i %*% rhovec/nobs)
         avg_direct <- dir * beff

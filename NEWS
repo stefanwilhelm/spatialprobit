@@ -1,5 +1,8 @@
 # User visible changes in spatialprobit package
 
+## changes in spatialprobie 1.0.2 (2023-11-12)
+* Bugfix request from Prof Ripley: Package declares encoding as UTF-8 but had files in the R directory which were not UTF-8. This causes segfaults on attempted installation with macOS 14.1.
+
 ## changes in spatialprobit 1.0.1 (2023-08-21)
 * `if (packageVersion("spdep") < "1.2")` replaces the former numeric version numbering 1.2 with a suitable character version "1.2", 
 so numeric_version() and package_version() work properly (see also https://bugs.r-project.org/show_bug.cgi?id=18548)
