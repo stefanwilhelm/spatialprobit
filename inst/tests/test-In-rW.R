@@ -24,8 +24,8 @@ W <- kNearestNeighbors(x=rnorm(n), y=rnorm(n), k=6)
 if (class(W) == "dgCMatrix") {
   I <- sparseMatrix(i=1:n,j=1:n,x=Inf)  # use Inf as placeholder
   S <- (I - rho * W)
-  ind  <- which(is.infinite(S@x))  # Stellen an denen wir 1 einsetzen müssen (I_n)
-  ind2 <- which(!is.infinite(S@x))  # Stellen an denen wir -rho*W einsetzen müssen
+  ind  <- which(is.infinite(S@x))  # array indexes that need to be filled with "1" (I_n)
+  ind2 <- which(!is.infinite(S@x))  # array indexes that need to be filled with "-rho*W"
   S@x[ind] <- 1
 } else {
   S <- I_n - rho * W

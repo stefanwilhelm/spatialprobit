@@ -107,7 +107,7 @@ sar_eigs <- function(eflag, W){
 sar_lndet <- function(ldetflag,W,rmin,rmax){
   results       <- NULL
   env <- new.env(parent=globalenv())
-  listw <- mat2listw(W)
+  listw <- mat2listw(W, style="W")
   assign("n", nrow(W), envir=env)
   assign("listw", listw, envir=env)
   assign("family", "SAR", envir=env)

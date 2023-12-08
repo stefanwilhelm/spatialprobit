@@ -37,11 +37,11 @@ while (i <= n) {
   # create proposal rho_p from proposal density g(rho_p | rho_{t-1}) ~ N(rho_{t-1}, c^2)
   rho_p <- rho_t[i-1] + c * s[i]   # proposal rho = letztes akzeptiertes Rho + normalverteilte Zufallsstreuung s
   
-  # Berechnung der Dichte f(rho_p) für das Proposal rho_p
+  # Berechnung der Dichte f(rho_p) fuer das Proposal rho_p
   p_p <- density_rho(rho_p, beta=beta, z=z, I_n=I_n, W=W, X=X, type=type)       
-  # SW: Berechnung der Dichte ist teuer, daher besser für ein Grid vorher rechnen?
-  # Jain, Dichte p(rho|t,beta( hängt von z, beta ab. Aber zumindestens die Log-Determinante kann man vorher berechnen
-  # Berechnung Dichte f(rho_{t-1}) für letzten Wert der Chain
+  # SW: Berechnung der Dichte ist teuer, daher besser fuer ein Grid vorher rechnen?
+  # Jain, Dichte p(rho|t,beta( haengt von z, beta ab. Aber zumindestens die Log-Determinante kann man vorher berechnen
+  # Berechnung Dichte f(rho_{t-1}) fuer letzten Wert der Chain
   # p_t <- p(rho_t[i-1], beta=beta, z=z, W=W, X=X, type=type)  # SW: Kann ich die alte Dichte nicht merken, dann muss ich die nicht neu berechnen
 
   # Wegen Symmetrie der Normalverteilung als Proposal-Dichte g(rho_p | rho_t) = g(rho_t | rho_p)

@@ -49,12 +49,15 @@
 #   (bb) p(p | z, B, sige) ~ |I - pW| exp(-1/(2*sige)*(Sz - SxB)'(Sz - SxB))
 #                  z = xB + S^(-1)e
 #                  Sz - SxB = e
-#   (cc) Erwartungswert von von Normalverteilung p(beta | z, rho) ändert sich
+#   (cc) Erwartungswert von von Normalverteilung p(beta | z, rho) aendert sich
 # - No spatial spillover, marginal effects in SEM Probit
 
 # Bayesian estimation of the probit model with spatial errors (SEM probit)
 #
-# @param formula 
+# @param formula
+# @param W spatial weights matrix
+# @param data
+# @param subset
 semprobit <- function(formula, W, data, subset, ...) {
   cl <- match.call()                     # cl ist object of class "call"
   mf <- match.call(expand.dots = FALSE)  # mf ist object of class "call"
@@ -247,7 +250,7 @@ sem_probit_mcmc <- function(y, X, W, ndraw=1000, burn.in=100, thinning=1,
   # E[z_i^(t) | z_{-i}^(t-1)] = mu_i - H_{ii}^{-1} H_{i,-i} [ z_{-i}^(t-1) - mu_{-i}^(t-1) ]
   #                           = mu_i - H_{ii}^{-1} H_{i,.} [ z^(t-1) - mu^(t-1) ] + (z_{i}^(t-1) - mu_i^(t-1))
   # 
-  # Vektorisiert für alle z_i | z_{-i} untereinandergeschrieben:
+  # Vektorisiert fuer alle z_i | z_{-i} untereinandergeschrieben:
   # E[z^(t) | z_{-i}^(t-1) ]  = mu^(t-1)  - diag(H)^{-1} H [ z^(t-1) - mu^(t-1) ] + [ z^(t-1) - mu^(t-1) ]
   # 
   # H = 1/sige * (I_n - rho * W)'(I_n - rho * W) = 1/sige * (I_n - 2*rho*W + rho^2*W^2)
