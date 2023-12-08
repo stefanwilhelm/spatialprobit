@@ -117,10 +117,10 @@ for SAR probit/SAR Ordered Probit/ SEM probit model fitting
 }
 
 \examples{
-\dontrun{
+\donttest{
 # Example from LeSage/Pace (2009), section 10.3.1, p. 302-304
 # Value of "a" is not stated in book! 
-# Assuming a=-1 which gives approx. 50% censoring
+# Assuming a=-1 which gives approx. 50\% censoring
 library(spatialprobit)
 
 a <- -1   # control degree of censored observation

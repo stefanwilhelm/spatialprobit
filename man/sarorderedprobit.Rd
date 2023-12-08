@@ -113,7 +113,7 @@ Stefan Wilhelm <wilhelm@financial.com>
 }
 
 \examples{
-\dontrun{
+\donttest{
 library(spatialprobit)
 set.seed(1)
 
@@ -147,7 +147,7 @@ W <- kNearestNeighbors(x=rnorm(n), y=rnorm(n), k=6)
 # create samples from epsilon using independence of distributions (rnorm()) 
 # to avoid dense matrix I_n
 eps <- rnorm(n=n, mean=0, sd=1)
-z   <- solve(qr(I_n - rho * W), X %*% beta + eps)
+z   <- solve(qr(I_n - rho * W), X \%*\% beta + eps)
 
 # ordered variable y:
 # y_i = 1 for phi_0 < z <= phi_1; -Inf < z <= 0

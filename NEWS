@@ -1,6 +1,13 @@
 # User visible changes in spatialprobit package
 
-## changes in spatialprobie 1.0.2 (2023-11-12)
+## changes in spatialprobit 1.0.3 (2023-11-19)
+* Some changes to DESCRIPTION and .Rd documentation files were required by CRAN:
+** Added Authors@R field
+** Added ISBN/DOI references to LeSage and Pace (2009) and Wilhelm and de Matos (2013)
+** Replaced \dontrun with \donttest in Rd examples
+* replaced non-ASCII characters in R files
+
+## changes in spatialprobit 1.0.2 (2023-11-12)
 * Bugfix request from Prof Ripley: Package declares encoding as UTF-8 but had files in the R directory which were not UTF-8. This causes segfaults on attempted installation with macOS 14.1.
 
 ## changes in spatialprobit 1.0.1 (2023-08-21)
