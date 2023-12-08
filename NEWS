@@ -1,6 +1,6 @@
 # User visible changes in spatialprobit package
 
-## changes in spatialprobit 1.0.3 (2023-11-19)
+## changes in spatialprobit 1.0.3 (2023-12-08)
 * Some changes to DESCRIPTION and .Rd documentation files were required by CRAN:
 ** Added Authors@R field
 ** Added ISBN/DOI references to LeSage and Pace (2009) and Wilhelm and de Matos (2013)
