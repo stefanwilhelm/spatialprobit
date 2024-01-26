@@ -188,7 +188,7 @@ impacts(sarprobit.fit1)
 ################################################################################
 
 # Value of "a" is not stated in book! 
-# Assuming a=-1 which gives approx. 50% censoring
+# Assuming a=-1 which gives approx. 50\% censoring
  library(spatialprobit)
 
 a <- -1   # control degree of censored observation

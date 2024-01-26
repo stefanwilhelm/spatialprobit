@@ -1,6 +1,6 @@
 Package: spatialprobit
 Version: 1.0.3
-Date: 2023-12-08
+Date: 2024-01-26
 Title: Spatial Probit Models
 Authors@R: c(
   person("Stefan", "Wilhelm", email = "wilhelm@financial.com", role = c("aut", "cre")),
