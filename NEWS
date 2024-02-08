@@ -1,5 +1,9 @@
 # User visible changes in spatialprobit package
 
+## changes in spatialprobit 1.0.4 (2024-02-06)
+* Replaced all \dontrun in *.Rd files, except for Katrina.Rd which requires a Google API Key
+* Fixed some examples in *.Rd files
+
 ## changes in spatialprobit 1.0.3 (2023-12-08)
 * Some changes to DESCRIPTION and .Rd documentation files were required by CRAN:
 ** Added Authors@R field

@@ -46,7 +46,7 @@ Stefan Wilhelm <wilhelm@financial.com>
 }
 
 \examples{
-\dontrun{
+\donttest{
 library(Matrix)
 set.seed(2)
 
@@ -68,12 +68,9 @@ m <- 6
 
 # spatial weight matrix with m=6 nearest neighbors
 # W must not have non-zeros in the main diagonal!
-i <- rep(1:n, each=m)
-j <- rep(NA, n * m)
-for (k in 1:n) {
-  j[(((k-1)*m)+1):(k*m)] <- sample(x=(1:n)[-k], size=m, replace=FALSE)
-}
-W <- sparseMatrix(i, j, x=1/m, dims=c(n, n))
+lat <- rnorm(n)
+long <- rnorm(n)
+W <- kNearestNeighbors(lat, long, k=6)
 
 # innovations
 eps <- rnorm(n=n, mean=0, sd=1)

@@ -136,11 +136,11 @@ Stefan Wilhelm <wilhelm@financial.com>
 }
 
 \examples{
-\dontrun{
+\donttest{
 require(spatialprobit)
 
 # number of observations
-n <- 10
+n <- 100
 
 # true parameters
 beta <- c(0, 1, -1)
@@ -157,12 +157,7 @@ m <- 6
 
 # spatial weight matrix with m=6 nearest neighbors
 # W must not have non-zeros in the main diagonal!
-i <- rep(1:n, each=m)
-j <- rep(NA, n * m)
-for (k in 1:n) {
-  j[(((k-1)*m)+1):(k*m)] <- sample(x=(1:n)[-k], size=m, replace=FALSE)
-}
-W <- sparseMatrix(i, j, x=1/m, dims=c(n, n))
+W <- kNearestNeighbors(x = rnorm(n), y = rnorm(n), k = m)
 
 # innovations
 eps <- rnorm(n=n, mean=0, sd=1)
@@ -215,7 +210,8 @@ ind <- which(y <=0)
 y[ind] <- 0
 
 # Fit SAR Tobit (with approx. 50\% censored observations)
-fit_sartobit <- sartobit(y ~ x,W,ndraw=1000,burn.in=200, showProgress=TRUE)
+fit_sartobit <- sartobit(y ~ x, W, ndraw=1000, burn.in=200, 
+  computeMarginalEffects=TRUE, showProgress=TRUE)
 
 # print impacts
 impacts(fit_sartobit)

@@ -32,7 +32,7 @@ Stefan Wilhelm <wilhelm@financial.com>
 }
 
 \examples{
-\dontrun{
+\donttest{
 # LeSage/Pace(2009), Table 10.1, p.291: n=400, m=10
 res1 <- LeSagePaceExperiment(n=400, beta=c(0,1,-1), rho=0.75, 
  ndraw=1000, burn.in=200, thinning=1, m=10)

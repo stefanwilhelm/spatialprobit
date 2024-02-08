@@ -117,7 +117,7 @@ based on code from James P. LeSage}
 }
 
 \examples{
-\dontrun{
+\donttest{
 library(Matrix)
 # number of observations
 n <- 200

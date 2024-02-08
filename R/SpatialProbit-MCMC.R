@@ -148,11 +148,12 @@ update_I_rW <- function(S, ind, rho, W) {
 #' @param m
 #' @param computeMarginalEffects
 #' @param showProgress
+#' @param verbose show verbose output
 #' @return an object of class "sarprobit"
 sar_probit_mcmc <- function(y, X, W, ndraw=1000, burn.in=100, thinning=1, 
   prior=list(a1=1, a2=1, c=rep(0, ncol(X)), T=diag(ncol(X))*1e12, lflag = 0), 
   start=list(rho=0.75, beta=rep(0, ncol(X))),
-  m=10, computeMarginalEffects=TRUE, showProgress=FALSE){  
+  m=10, computeMarginalEffects=TRUE, showProgress=FALSE, verbose=FALSE){  
 
   #start timer
   timet <- Sys.time()
@@ -302,9 +303,11 @@ sar_probit_mcmc <- function(y, X, W, ndraw=1000, burn.in=100, thinning=1,
   
   # 1. sample from z | rho, beta, y using precision matrix H
   # mu will be updated after drawing from rho
-    
-  #cat(i, " Drawing z | rho, beta, y\n")
-  #cat("Range of mu:", range(mu), "\n")  
+  
+  if (verbose) {  
+    message(i, " Drawing z | rho, beta, y")
+    message("Range of mu:", paste(range(mu), collapse = " to "))
+  }
   
   # see LeSage (2009) for choice of burn-in size, often m=5 or m=10 is used!
   # we can also use m=1 together with start.value=z, see LeSage (2009), section 10.1.5
@@ -317,10 +320,11 @@ sar_probit_mcmc <- function(y, X, W, ndraw=1000, burn.in=100, thinning=1,
   }
     
   if (any(is.na(z) | is.infinite(z))) {
-    cat("z contains infinite / NaN", "\n")
-    cat("Draw was done using mu =", paste0(mu, sep=","), "\n")
-    cat("Range of mu:", range(mu), "\n")
-    print(z)
+    warning("z contains infinite / NaN")
+    if (verbose) {
+      message("Draw was done using mu =", paste(mu, collapse = ","))
+      message("\nRange of mu:", paste(range(mu), collapse = " to "))
+    }
   }  
     
   # 2. sample from beta | rho, z, y
@@ -330,7 +334,9 @@ sar_probit_mcmc <- function(y, X, W, ndraw=1000, burn.in=100, thinning=1,
   beta <- as.double(c2 + betadraws[i + burn.in, ])
   
   # 3. sample from rho | beta, z
-  #cat(i, " Drawing rho | beta, z for beta=",beta,"\n")
+  if (verbose) { 
+    message(i, " Drawing rho | beta, z for beta=", beta)
+  }
   
   #---- DRAW RHO ----
   #see LeSage 2009 chapter 5 - page 132 for the explanation of the
